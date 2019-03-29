@@ -1,0 +1,23 @@
+main (x : int, y : int) : int
+	a : int;
+	b : int;
+	res : int;
+	test : byte[5];
+	add (x : int, y : int) : int
+	{
+		return x+y;
+	}
+	mul (x : int, y : int) : int
+	{
+		return x*y;
+	}
+	test2 (x : int, x : byte) : int	--sem error: duplicates
+	{
+		writeString("hi!");
+	}
+{
+	a = 17;
+	b = 12;
+	res = add(mul(a, 2), add(mul(2, b), 6));
+	return res;
+}

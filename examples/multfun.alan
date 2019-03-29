@@ -1,0 +1,11 @@
+main() : int
+	b : byte;
+	t : int;
+	xtend(x : byte) : int
+	{
+		return extend(shrink(extend(shrink(extend(x)))));
+	}
+{
+	b = 'a';
+	return xtend(b);
+}

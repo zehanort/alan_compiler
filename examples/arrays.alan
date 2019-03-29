@@ -1,0 +1,16 @@
+main () : proc
+	t1 : byte[10];
+	t2 : byte[20];
+	f (x : reference byte [], y : reference byte []) : int
+	i : int;
+	{
+		i = 0;
+		while(i < 10) {
+			writeChar(x[i]);
+			writeString(y);
+			i = i+1;
+		}
+	}
+{
+	return;
+}
