@@ -30,8 +30,6 @@ static std::unique_ptr<Module> TheModule;
 static std::unique_ptr<legacy::FunctionPassManager> TheFPM;
 
 // Global LLVM variables related to the generated code.
-// static GlobalVariable *TheVars;
-// static GlobalVariable *TheNL;
 static Function *TheWriteInteger;
 static Function *TheWriteString;
 
@@ -103,16 +101,13 @@ Value * codegen(ast t) {
   }
 
   case INT:
-    t->type = typeInteger;
-    return;
+    return c32(t->num);
 
   case CHAR:
-    t->type = typeChar;
-    return; 
-  
+    return c8(t->num);
+
   case STRING:
-    t->type = typeArray(strlen(t->id), typeChar);
-    return;
+    return Builder.CreateGlobalStringPtr(t->id);
 
   case VDEF:
     if (t->type->kind == TYPE_ARRAY && t->type->size <= 0)
@@ -168,17 +163,84 @@ Value * codegen(ast t) {
     return;
   }
 
-  case IF:
-    ast_sem(t->left);
-    if (!equalType(t->left->type, typeBoolean))
-      error("if expects a boolean condition");
-    ast_sem(t->right);
-    return;
+  case IF: {
+    Value *CondV = codegen(t->left);
+    if (!CondV)
+      return nullptr;
 
-  case IFELSE:
-    ast_sem(t->left);
-    ast_sem(t->right);
-    return;
+    Function *TheFunction = Builder.GetInsertBlock()->getParent();
+    BasicBlock *ThenBB  = BasicBlock::Create(TheContext, "then", TheFunction);
+    BasicBlock *ElseBB  = BasicBlock::Create(TheContext, "else");
+    BasicBlock *MergeBB = BasicBlock::Create(TheContext, "ifcont");
+    Builder.CreateCondBr(CondV, ThenBB, ElseBB);
+
+    // Emit then block.
+    Builder.SetInsertPoint(ThenBB);
+    Value *ThenV = codegen(t->right);
+    if (!ThenV)
+      return nullptr;
+
+    Builder.CreateBr(MergeBB);
+    // Codegen of 'Then' can change the current block, update ThenBB for the PHI.
+    ThenBB = Builder.GetInsertBlock();
+
+    // Emit else block.
+    TheFunction->getBasicBlockList().push_back(ElseBB);
+    Builder.SetInsertPoint(ElseBB);
+    Builder.CreateBr(MergeBB);
+
+    // Emit merge block.
+    TheFunction->getBasicBlockList().push_back(MergeBB);
+    Builder.SetInsertPoint(MergeBB);
+    PHINode *PN = Builder.CreatePHI(Type::getDoubleTy(TheContext), 2, "iftmp");
+
+    PN->addIncoming(ThenV, ThenBB);
+    PN->addIncoming(ElseV, ElseBB);
+    return PN;
+  }
+
+  case IFELSE: {
+    Value *CondV = codegen(t->left->left);
+    if (!CondV)
+      return nullptr;
+
+    Function *TheFunction = Builder.GetInsertBlock()->getParent();
+    BasicBlock *ThenBB  = BasicBlock::Create(TheContext, "then", TheFunction);
+    BasicBlock *ElseBB  = BasicBlock::Create(TheContext, "else");
+    BasicBlock *MergeBB = BasicBlock::Create(TheContext, "ifcont");
+    Builder.CreateCondBr(CondV, ThenBB, ElseBB);
+
+    // Emit then block.
+    Builder.SetInsertPoint(ThenBB);
+    Value *ThenV = codegen(t->left->right);
+    if (!ThenV)
+      return nullptr;
+
+    Builder.CreateBr(MergeBB);
+    // Codegen of 'Then' can change the current block, update ThenBB for the PHI.
+    ThenBB = Builder.GetInsertBlock();
+
+    // Emit else block.
+    TheFunction->getBasicBlockList().push_back(ElseBB);
+    Builder.SetInsertPoint(ElseBB);
+
+    Value *ElseV = codegen(t->right);
+    if (!ElseV)
+      return nullptr;
+
+    Builder.CreateBr(MergeBB);
+    // codegen of 'Else' can change the current block, update ElseBB for the PHI.
+    ElseBB = Builder.GetInsertBlock();
+
+    // Emit merge block.
+    TheFunction->getBasicBlockList().push_back(MergeBB);
+    Builder.SetInsertPoint(MergeBB);
+    PHINode *PN = Builder.CreatePHI(Type::getDoubleTy(TheContext), 2, "iftmp");
+
+    PN->addIncoming(ThenV, ThenBB);
+    PN->addIncoming(ElseV, ElseBB);
+    return PN;
+  }
 
   case WHILE:
     ast_sem(t->left);
@@ -269,122 +331,87 @@ Value * codegen(ast t) {
     return;
   }
 
-  case PLUS:
-    ast_sem(t->left);
-    ast_sem(t->right);
-    if (t->left == NULL) {
-      if (!equalType(t->right->type, typeInteger))
-        error("signedness only supported by int type");
-      else {
-        t->type = typeInteger;
-        return;
-      }
-    }
-    checkTypes(t->left->type, t->right->type, "+");
-    t->type = t->right->type;
-    return;
+  case PLUS: {
+    Value *l = codegen(t->left);
+    Value *r = codegen(t->right);
+    return Builder.CreateAdd(l, r, "addtmp");
+  }
     
-  case MINUS:
-    ast_sem(t->left);
-    ast_sem(t->right);
-    if (t->left == NULL) {
-      if (!equalType(t->right->type, typeInteger))
-        error("signedness only supported by int type");
-      else {
-        t->type = typeInteger;
-        return;
-      }
-    }
-    checkTypes(t->left->type, t->right->type, "-");
-    t->type = t->right->type;
-    return;
+  case MINUS: {
+    Value *l = codegen(t->left);
+    Value *r = codegen(t->right);
+    return Builder.CreateSub(l, r, "subtmp");
+  }
     
-  case TIMES:
-    ast_sem(t->left);
-    ast_sem(t->right);
-    checkTypes(t->left->type, t->right->type, "*");
-    t->type = t->right->type;
-    return;
+  case TIMES: {
+    Value *l = codegen(t->left);
+    Value *r = codegen(t->right);
+    return Builder.CreateMul(l, r, "multmp");
+  }
     
-  case DIV:
-    ast_sem(t->left);
-    ast_sem(t->right);
-    checkTypes(t->left->type, t->right->type, "/");
-    t->type = t->right->type;
-    return;
+  case DIV: {
+    Value *l = codegen(t->left);
+    Value *r = codegen(t->right);
+    return Builder.CreateSDiv(l, r, "divtmp");
+  }
+
+  case MOD: {
+    Value *l = codegen(t->left);
+    Value *r = codegen(t->right);
+    return Builder.CreateSRem(l, r, "modtmp");
+  }
     
-  case MOD:
-    ast_sem(t->left);
-    ast_sem(t->right);
-    checkTypes(t->left->type, t->right->type, "%%");
-    t->type = t->right->type;
-    return;
-    
-  case EQ:
-    ast_sem(t->left);
-    ast_sem(t->right);
-    checkTypes(t->left->type, t->right->type, "==");
-    t->type = typeBoolean;
-    return;
+  case EQ: {
+    Value *l = codegen(t->left);
+    Value *r = codegen(t->right);
+    return Builder.CreateICmpEQ(l, r, "eqtmp");
+  }
 
-  case NE:
-    ast_sem(t->left);
-    ast_sem(t->right);
-    checkTypes(t->left->type, t->right->type, "!=");
-    t->type = typeBoolean;
-    return;
+  case NE: {
+    Value *l = codegen(t->left);
+    Value *r = codegen(t->right);
+    return Builder.CreateICmpNE(l, r, "neqtmp");
+  }
 
-  case LT:
-    ast_sem(t->left);
-    ast_sem(t->right);
-    checkTypes(t->left->type, t->right->type, "<");
-    t->type = typeBoolean;
-    return;
+  case LT: {
+    Value *l = codegen(t->left);
+    Value *r = codegen(t->right);
+    return Builder.CreateICmpSLT(l, r, "lttmp");
+  }
 
-  case LE:
-    ast_sem(t->left);
-    ast_sem(t->right);
-    checkTypes(t->left->type, t->right->type, "<=");
-    t->type = typeBoolean;
-    return;
+  case LE: {
+    Value *l = codegen(t->left);
+    Value *r = codegen(t->right);
+    return Builder.CreateICmpSLE(l, r, "letmp");
+  }
 
-  case GT:
-    ast_sem(t->left);
-    ast_sem(t->right);
-    checkTypes(t->left->type, t->right->type, ">");
-    t->type = typeBoolean;
-    return;
+  case GT: {
+    Value *l = codegen(t->left);
+    Value *r = codegen(t->right);
+    return Builder.CreateICmpSGT(l, r, "gttmp");
+  }
 
-  case GE:
-    ast_sem(t->left);
-    ast_sem(t->right);
-    checkTypes(t->left->type, t->right->type, ">=");
-    t->type = typeBoolean;
-    return;
+  case GE: {
+    Value *l = codegen(t->left);
+    Value *r = codegen(t->right);
+    return Builder.CreateICmpSGE(l, r, "getmp");
+  }
 
-  case AND:
-    ast_sem(t->left);
-    ast_sem(t->right);
-    if (!equalType(t->left->type, typeBoolean) ||
-        !equalType(t->right->type, typeBoolean))
-      error("only boolean conditions supported by & operator");
-    t->type = typeBoolean;
-    return;
+  case AND: {
+    Value *l = codegen(t->left);
+    Value *r = codegen(t->right);
+    return Builder.CreateAnd(l, r, "andtmp");
+  }
 
-  case OR:
-    ast_sem(t->left);
-    ast_sem(t->right);
-    if (!equalType(t->left->type, typeBoolean) ||
-        !equalType(t->right->type, typeBoolean))
-      error("only boolean conditions supported by | operator");
-    t->type = typeBoolean;
-    return;
+  case OR: {
+    Value *l = codegen(t->left);
+    Value *r = codegen(t->right);
+    return Builder.CreateOr(l, r, "ortmp");
+  }
 
-  case NOT:
-    ast_sem(t->right);
-    if (!equalType(t->right->type, typeBoolean))
-      error("only boolean conditions supported by ! operator");
-    t->type = typeBoolean;
-    return;
+  case NOT: {
+    Value *l = codegen(t->left);
+    Value *r = codegen(t->right);
+    return Builder.CreateNot(l, r, "nottmp");
   }
 }
