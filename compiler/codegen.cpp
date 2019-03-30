@@ -59,46 +59,7 @@ Value * codegen(ast t) {
   if (t == nullptr) return nullptr;
   switch (t->k) {
   
-  case ID: {
-    Value * index = codegen(t->right);
-    SymbolEntry *e = lookup(t->id);
-    if (!e) {   // ID not found; dummy value for type
-      t->type = typeBoolean;
-      return;
-    }
-    switch (e->entryType) {
-    
-    case ENTRY_VARIABLE:
-      if (t->right == NULL)
-        t->type = e->u.eVariable.type;
-      else {
-        if (e->u.eVariable.type->kind != TYPE_ARRAY && e->u.eVariable.type->kind != TYPE_IARRAY)
-          error("indexed identifier is not an array");
-        t->type = e->u.eVariable.type->refType;
-      }
-      break;
-
-    case ENTRY_PARAMETER:
-      if (t->right == NULL)
-        t->type = e->u.eParameter.type;
-      else {
-        if (e->u.eParameter.type->kind != TYPE_ARRAY && e->u.eParameter.type->kind != TYPE_IARRAY)
-          error("indexed identifier is not an array");
-        t->type = e->u.eParameter.type->refType;
-      }
-      break;
-
-    case ENTRY_FUNCTION:
-      t->type = e->u.eFunction.resultType;
-      break;
-
-    default:
-      internal("garbage in symbol table");
-    }
-    t->nesting_diff = currentScope->nestingLevel - e->nestingLevel;
-    t->offset = e->u.eVariable.offset;
-    return;
-  }
+  case ID:
 
   case INT:
     return c32(t->num);
@@ -110,226 +71,85 @@ Value * codegen(ast t) {
     return Builder.CreateGlobalStringPtr(t->id);
 
   case VDEF:
-    if (t->type->kind == TYPE_ARRAY && t->type->size <= 0)
-      error("illegal size of array in variable definition");
-    newVariable(t->id, t->type);
-    return;
-
+    
   case FDEF:
-    ast_sem(t->left);
-    ast_sem(t->right);
-    closeScope();
-    if (!funcList->prev) currFunction = NULL;
-    else goToPrevFunction();
-    return;
-
-  case FDECL: {
-    SymbolEntry * f = newFunction(t->id);
-    openScope();
-    if (!funcList) createFuncList(f);
-    else addFunctionToList(f);
-    // in case of error in function declaration:
-    if (!f)
-      return;
-    ast_sem(t->left);
-    endFunctionHeader(currFunction, t->type);
-    ast_sem(t->right);
-    t->num_vars = currentScope->negOffset;
-    return;
-  }
-
+    
+  case FDECL:
+    
   case PAR_VAL:
-    if (t->type->kind == TYPE_ARRAY || t->type->kind == TYPE_IARRAY)
-      error("an array can not be passed by value as a parameter to a function");
-    newParameter(t->id, t->type, PASS_BY_VALUE, currFunction);
-    return;
 
   case PAR_REF:
-    newParameter(t->id, t->type, PASS_BY_REFERENCE, currFunction);
-    return;
 
-  case ASSIGN: {
-    ast_sem(t->left);
-    if (t->left->type->kind == TYPE_ARRAY || t->left->type->kind == TYPE_IARRAY)
-      error("left side of assignment can not be an array");
-    ast_sem(t->right);
-    SymbolEntry * e = lookupEntry(t->left->id, LOOKUP_ALL_SCOPES, false);
-    if (!e)
-      return;
-    if (t->right->type==NULL)
-      return;
-    if (!equalType(t->left->type, t->right->type))
-      error("type mismatch in assignment");
-    return;
-  }
+  case ASSIGN:
 
   case IF: {
     Value *CondV = codegen(t->left);
-    if (!CondV)
-      return nullptr;
-
     Function *TheFunction = Builder.GetInsertBlock()->getParent();
     BasicBlock *ThenBB  = BasicBlock::Create(TheContext, "then", TheFunction);
-    BasicBlock *ElseBB  = BasicBlock::Create(TheContext, "else");
-    BasicBlock *MergeBB = BasicBlock::Create(TheContext, "ifcont");
-    Builder.CreateCondBr(CondV, ThenBB, ElseBB);
+    BasicBlock *MergeBB = BasicBlock::Create(TheContext, "endif", TheFunction);
+    Builder.CreateCondBr(CondV, ThenBB, MergeBB);
 
-    // Emit then block.
+    // Emit then block
     Builder.SetInsertPoint(ThenBB);
-    Value *ThenV = codegen(t->right);
-    if (!ThenV)
-      return nullptr;
-
+    codegen(t->right);
     Builder.CreateBr(MergeBB);
-    // Codegen of 'Then' can change the current block, update ThenBB for the PHI.
-    ThenBB = Builder.GetInsertBlock();
-
-    // Emit else block.
-    TheFunction->getBasicBlockList().push_back(ElseBB);
-    Builder.SetInsertPoint(ElseBB);
-    Builder.CreateBr(MergeBB);
-
-    // Emit merge block.
-    TheFunction->getBasicBlockList().push_back(MergeBB);
+    
+    // Change Insert Point
     Builder.SetInsertPoint(MergeBB);
-    PHINode *PN = Builder.CreatePHI(Type::getDoubleTy(TheContext), 2, "iftmp");
-
-    PN->addIncoming(ThenV, ThenBB);
-    PN->addIncoming(ElseV, ElseBB);
-    return PN;
+    return nullptr;
   }
 
   case IFELSE: {
     Value *CondV = codegen(t->left->left);
-    if (!CondV)
-      return nullptr;
-
     Function *TheFunction = Builder.GetInsertBlock()->getParent();
     BasicBlock *ThenBB  = BasicBlock::Create(TheContext, "then", TheFunction);
-    BasicBlock *ElseBB  = BasicBlock::Create(TheContext, "else");
-    BasicBlock *MergeBB = BasicBlock::Create(TheContext, "ifcont");
+    BasicBlock *ElseBB  = BasicBlock::Create(TheContext, "else", TheFunction);
+    BasicBlock *MergeBB = BasicBlock::Create(TheContext, "endif", TheFunction);
     Builder.CreateCondBr(CondV, ThenBB, ElseBB);
 
-    // Emit then block.
+    // Emit then block
     Builder.SetInsertPoint(ThenBB);
-    Value *ThenV = codegen(t->left->right);
-    if (!ThenV)
-      return nullptr;
-
+    codegen(t->left->right);
     Builder.CreateBr(MergeBB);
-    // Codegen of 'Then' can change the current block, update ThenBB for the PHI.
-    ThenBB = Builder.GetInsertBlock();
-
-    // Emit else block.
-    TheFunction->getBasicBlockList().push_back(ElseBB);
+    
+    // Emit else block
     Builder.SetInsertPoint(ElseBB);
-
-    Value *ElseV = codegen(t->right);
-    if (!ElseV)
-      return nullptr;
-
+    codegen(t->right);
     Builder.CreateBr(MergeBB);
-    // codegen of 'Else' can change the current block, update ElseBB for the PHI.
-    ElseBB = Builder.GetInsertBlock();
 
-    // Emit merge block.
-    TheFunction->getBasicBlockList().push_back(MergeBB);
+    // Change Insert Point
     Builder.SetInsertPoint(MergeBB);
-    PHINode *PN = Builder.CreatePHI(Type::getDoubleTy(TheContext), 2, "iftmp");
-
-    PN->addIncoming(ThenV, ThenBB);
-    PN->addIncoming(ElseV, ElseBB);
-    return PN;
+    return nullptr;
   }
 
-  case WHILE:
-    ast_sem(t->left);
-    if (!equalType(t->left->type, typeBoolean))
-      error("while loop expects a boolean condition");
-    ast_sem(t->right);
-    return;
+  case WHILE: {
+    Function *TheFunction = Builder.GetInsertBlock()->getParent();
+    BasicBlock *CondBB = BasicBlock::Create(TheContext, "cond", TheFunction);
+    BasicBlock *LoopBB = BasicBlock::Create(TheContext, "loop", TheFunction);
+    BasicBlock *AfterBB = BasicBlock::Create(TheContext, "after", TheFunction);
+    
+    // Emit Condition block
+    Builder.SetInsertPoint(CondBB);
+    Value *CondV = codegen(t->left);
+    Builder.CreateCondBr(CondV, LoopBB, AfterBB);
+    // Emit Loop block
+    Builder.SetInsertPoint(LoopBB);
+    codegen(t->right);
+    Builder.CreateBr(CondBB);
+    Builder.SetInsertPoint(AfterBB);
+    return nullptr;
+  }
 
   case RET:
-    if (!currFunction)    // no current function? what?
-      internal("return expression used outside of function body");
-    else if (t->right) {  // if we have the form "return e", check e and function result type
-      ast_sem(t->right);
-      if (!equalType(currFunction->u.eFunction.resultType, t->right->type))
-        error("result type of function and return value mismatch");
-    }
-    else if (currFunction->u.eFunction.resultType->kind != TYPE_VOID)   // if we have the form "return" and fun is not proc
-      error("function defined as proc can not return anything");
-    return;
 
   case SEQ:
-    ast_sem(t->left);
-    ast_sem(t->right);
+    codegen(t->left);
+    codegen(t->right);
     return;
 
-  case FCALL: {
-    SymbolEntry * f = lookup(t->id);
-    if (!f)
-      return;
-    if (f->entryType != ENTRY_FUNCTION)
-      error("%s is not a function", t->id);
-    t->type = f->u.eFunction.resultType;
-    ast_sem(t->right);
+  case FCALL:
 
-    ast currPar = t->right;
-    SymbolEntry * expectedPar = f->u.eFunction.firstArgument;
-
-    while (currPar) {
-      if (!expectedPar) {
-        error("expected less function parameters");
-        return;
-      }
-
-      Type expectedParType = expectedPar->u.eParameter.type;
-      Type currParType = currPar->left->type;
-
-      if (expectedPar->u.eParameter.mode == PASS_BY_REFERENCE) {
-        // if actual parameter:
-        // --> has no id
-        if (!currPar->left->id) {
-          error("parameters passed by reference must be l-values");
-          return;
-        }
-        // --> is not an l-value
-        Type charArrayType = typeArray(strlen(currPar->left->id), typeChar);
-        if (!equalType(currParType, charArrayType) && !lookupEntry(currPar->left->id, LOOKUP_ALL_SCOPES, false)) {
-          error("parameters passed by reference must be l-values");
-          return;
-        }
-      }
-
-      if (expectedParType->kind == TYPE_IARRAY) {
-        if ((currParType->kind != TYPE_ARRAY) && (currParType->kind != TYPE_IARRAY))
-          error("function parameter expected to be an array");
-        if (!equalType(expectedParType->refType, currParType->refType))
-          error("function parameter expected to be an array of different type");
-      }
-      else {
-        if (!equalType(expectedParType, currParType))
-          error("function parameter type mismatch");
-      }
-      currPar = currPar->right;
-      expectedPar = expectedPar->u.eParameter.next;
-    }
-
-    if (expectedPar)
-      error("expected more function parameters");
-    return;
-  }
-
-  case FCALL_STMT: {
-    ast_sem(t->right);
-    SymbolEntry * f = lookupEntry(t->right->id, LOOKUP_ALL_SCOPES, false);
-    if (!f)
-      return;
-    if (f->u.eFunction.resultType->kind != TYPE_VOID)
-      error("functions called as statements must be declared as proc");
-    return;
-  }
+  case FCALL_STMT:
 
   case PLUS: {
     Value *l = codegen(t->left);
