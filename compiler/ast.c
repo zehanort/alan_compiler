@@ -1,10 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "ast.h"
-#include "error.h"
-#include "symbol.h"
-#include "general.h"
 
 SymbolEntry * currFunction;
 func funcList = NULL;

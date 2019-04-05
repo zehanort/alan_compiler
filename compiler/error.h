@@ -22,6 +22,10 @@
 #ifndef __ERROR_H__
 #define __ERROR_H__
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include "general.h"
 
 /* ---------------------------------------------------------------------
    --------- Πρωτότυπα των συναρτήσεων του χειριστή σφαλμάτων ----------

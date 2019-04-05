@@ -22,6 +22,10 @@
 #ifndef __GENERAL_H__
 #define __GENERAL_H__
 
+#include <stdlib.h>
+#include <stdlib.h>
+#include <string.h>
+#include "error.h"
 
 /* ---------------------------------------------------------------------
  * ----------- Πρωτότυπα των συναρτήσεων διαχείρισης μνήμης ------------
