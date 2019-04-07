@@ -23,7 +23,6 @@
 #define __GENERAL_H__
 
 #include <stdlib.h>
-#include <stdlib.h>
 #include <string.h>
 #include "error.h"
 
@@ -31,8 +30,8 @@
  * ----------- Πρωτότυπα των συναρτήσεων διαχείρισης μνήμης ------------
  * --------------------------------------------------------------------- */
 
-void * new    (size_t);
-void   delete (void *);
+//void * new    (size_t);
+//void   delete (void *);
 char *stringCopy(char *s);
 
 

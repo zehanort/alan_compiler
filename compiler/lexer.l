@@ -1,9 +1,9 @@
 %{
 #include <stdio.h>
 #include <string.h>
-#include "ast.h"
+#include "ast.hpp"
+#include "parser.hpp"
 #include "symbol.h"
-#include "parser.h"
 #include "general.h"
 
 #define T_eof 0
