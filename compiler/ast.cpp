@@ -30,7 +30,7 @@ void goToPrevFunction() {
    currFunction = funcList->function;   
 }
 
-void checkTypes(Type l, Type r, char *op) {
+void checkTypes(Type l, Type r, const char *op) {
   if (!equalType(l, r))
   	error("type mismatch in %s operator", op);
   if (!equalType(l, typeInteger) && !equalType(l, typeChar))  // !!!!!!!!!! WARNING, NEED TO CHECK RIGHT TYPE TOO?
