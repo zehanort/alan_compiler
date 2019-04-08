@@ -1,7 +1,7 @@
+#include "error.hpp"
+#include "general.hpp"
+#include "symbol.hpp"
 #include "ast.hpp"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 using namespace std;
 
@@ -9,14 +9,14 @@ SymbolEntry * currFunction;
 func funcList = NULL;
 
 void createFuncList(SymbolEntry * firstFunction) {
-   funcList = new(sizeof(*funcList));
+   funcList = new struct f_node;
    funcList->function = firstFunction;
    funcList->prev = NULL;
    currFunction = funcList->function;
 }
 
 void addFunctionToList(SymbolEntry * newFunction) {
-   func newFunc = new(sizeof(*newFunc));
+   func newFunc = new struct f_node;
    newFunc->function = newFunction;
    newFunc->prev = funcList;
    funcList = newFunc;
@@ -81,7 +81,7 @@ ASTFdef::ASTFdef(ASTNode *fdecl, ASTNode *body) {
   this->body = body;
 }
 
-ASTFdecl::ASTFdecl(string name, Type type, ASTSeq *param, ASTNode *locdef) {
+ASTFdecl::ASTFdecl(string name, Type type, ASTNode *param, ASTNode *locdef) {
   this->k = FDECL;
   this->name = name;
   this->type = type;
@@ -483,3 +483,4 @@ void ASTOp::sem() {
     type = typeBoolean;
     return;
   }
+}

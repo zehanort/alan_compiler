@@ -26,11 +26,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
-
-#include "general.h"
-#include "error.h"
-#include "symbol.h"
-
+#include "general.hpp"
+#include "error.hpp"
+#include "symbol.hpp"
 
 /* ---------------------------------------------------------------------
    ------------- Καθολικές μεταβλητές του πίνακα συμβόλων --------------

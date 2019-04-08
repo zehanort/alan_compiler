@@ -3,9 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "ast.hpp"
-#include "symbol.h"
-#include "general.h"
-#include "error.h"
+#include "symbol.hpp"
+#include "general.hpp"
+#include "error.hpp"
 
 using namespace std;
 

@@ -23,7 +23,11 @@
    ---------------------------- Header files ---------------------------
    --------------------------------------------------------------------- */
 
-#include "error.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include "general.hpp"
+#include "error.hpp"
 
 #define ANSI_COLOR_RED     "\x1b[31m"
 #define ANSI_COLOR_GREEN   "\x1b[32m"

@@ -5,10 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "ast.h"
-#include "error.h"
-#include "symbol.h"
-#include "general.h"
+#include "ast.hpp"
 
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LegacyPassManager.h>

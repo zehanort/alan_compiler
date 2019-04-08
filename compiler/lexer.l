@@ -3,8 +3,8 @@
 #include <string.h>
 #include "ast.hpp"
 #include "parser.hpp"
-#include "symbol.h"
-#include "general.h"
+#include "symbol.hpp"
+#include "general.hpp"
 
 #define T_eof 0
 

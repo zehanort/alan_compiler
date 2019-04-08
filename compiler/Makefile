@@ -17,13 +17,13 @@ parser.hpp parser.cpp: parser.y
 
 parser.o: parser.cpp parser.hpp ast.hpp
 
-general.o  : general.c general.h error.h
+general.o  : general.cpp general.hpp error.hpp
 	$(CC) $(CFLAGS) -ansi -pedantic -c $<
 
-error.o    : error.c error.h general.h
+error.o    : error.cpp error.hpp general.hpp
 	$(CC) $(CFLAGS) -ansi -pedantic -c $<
 
-symbol.o   : symbol.c symbol.h general.h error.h
+symbol.o   : symbol.cpp symbol.hpp general.hpp error.hpp
 	$(CC) -g -ansi -pedantic -c $<
 
 ast.o      : ast.cpp ast.hpp
@@ -39,4 +39,3 @@ clean:
 
 distclean: clean
 	$(RM) alan
-

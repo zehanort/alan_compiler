@@ -1,14 +1,14 @@
 /******************************************************************************
  *  CVS version:
- *     $Id: error.h,v 1.1 2003/05/13 22:21:01 nickie Exp $
+ *     $Id: general.h,v 1.1 2004/05/05 22:00:08 nickie Exp $
  ******************************************************************************
  *
- *  C header file : error.h
+ *  C header file : general.h
  *  Project       : PCL Compiler
  *  Version       : 1.0 alpha
  *  Written by    : Nikolaos S. Papaspyrou (nickie@softlab.ntua.gr)
- *  Date          : May 14, 2003
- *  Description   : Generic symbol table in C, simple error handler
+ *  Date          : May 5, 2004
+ *  Description   : Generic symbol table in C, general header file
  *
  *  Comments: (in Greek iso-8859-7)
  *  ---------
@@ -19,21 +19,24 @@
  */
 
 
-#ifndef __ERROR_H__
-#define __ERROR_H__
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include "general.h"
+#ifndef __GENERAL_HPP__
+#define __GENERAL_HPP__
 
 /* ---------------------------------------------------------------------
-   --------- Πρωτότυπα των συναρτήσεων του χειριστή σφαλμάτων ----------
+ * ----------- Πρωτότυπα των συναρτήσεων διαχείρισης μνήμης ------------
+ * --------------------------------------------------------------------- */
+
+//void * new    (size_t);
+//void   delete (void *);
+char *stringCopy(char *s);
+
+
+/* ---------------------------------------------------------------------
+   -------------- Καθολικές μεταβλητές του μεταγλωττιστή ---------------
    --------------------------------------------------------------------- */
 
-void internal (const char * fmt, ...);
-void fatal    (const char * fmt, ...);
-void error    (const char * fmt, ...);
-void warning  (const char * fmt, ...);
+extern int linecount;
+extern const char * filename;
+extern int sem_failed;
 
 #endif

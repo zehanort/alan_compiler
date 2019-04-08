@@ -19,8 +19,8 @@
  */
 
 
-#ifndef __SYMBOL_H__
-#define __SYMBOL_H__
+#ifndef __SYMBOL_HPP__
+#define __SYMBOL_HPP__
 
 
 /* ---------------------------------------------------------------------
@@ -62,10 +62,7 @@ typedef const char *  RepString;          /* Συμβολοσειρές             */
 
 /* Τύποι δεδομένων και αποτελέσματος συναρτήσεων */
 
-typedef struct Type_tag * Type;
-
-struct Type_tag {
-    enum {                               /***** Το είδος του τύπου ****/
+typedef enum {                           /***** Το είδος του τύπου ****/
        TYPE_VOID,                        /* Κενός τύπος αποτελέσματος */
        TYPE_INTEGER,                     /* Ακέραιοι                  */
        TYPE_BOOLEAN,                     /* Λογικές τιμές             */
@@ -74,7 +71,12 @@ struct Type_tag {
        TYPE_ARRAY,                       /* Πίνακες γνωστού μεγέθους  */
        TYPE_IARRAY,                      /* Πίνακες άγνωστου μεγέθους */
        TYPE_POINTER                      /* Δείκτες                   */
-    } kind;
+    } kind_t;
+
+typedef struct Type_tag * Type;
+
+struct Type_tag {
+    kind_t kind;
     Type           refType;              /* Τύπος αναφοράς            */
     RepInteger     size;                 /* Μέγεθος, αν είναι πίνακας */
     unsigned int   refCount;             /* Μετρητής αναφορών         */

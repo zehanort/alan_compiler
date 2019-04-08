@@ -1,12 +1,8 @@
 #ifndef __AST_HPP__
 #define __AST_HPP__
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <string>
-#include "error.h"
-#include "symbol.h"
-#include "general.h"
+#include "symbol.hpp"
 
 typedef struct f_node {
   SymbolEntry * function;
@@ -28,7 +24,7 @@ public:
   int line;
 
   ASTNode();
-  virtual void sem() = 0;
+  void sem();
 };
 
 class ASTId : public ASTNode {
@@ -96,11 +92,11 @@ public:
 class ASTFdecl : public ASTNode {
 public:
   std::string name;
-  ASTSeq *param;
+  ASTNode *param;
   ASTNode *locdef;
   int num_vars;     // for SCOPES (of functions)
 
-  ASTFdecl(std::string name, Type type, ASTSeq *param, ASTNode *locdef);
+  ASTFdecl(std::string name, Type type, ASTNode *param, ASTNode *locdef);
   void sem();
 };
 
