@@ -3,7 +3,14 @@
 echo ">>> Compiling..."
 echo ""
 
-make clean; make
+make clean
+make
+
+if [ $? -ne 0 ]; then
+    echo ">>> make failed. Abort."
+    make clean
+    exit 0
+fi
 
 echo ">>> Done."
 echo ""
