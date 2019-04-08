@@ -1,5 +1,5 @@
-#ifndef __AST_H__
-#define __AST_H__
+#ifndef __AST_HPP__
+#define __AST_HPP__
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,7 +28,7 @@ public:
   int line;
 
   ASTNode();
-  void sem();
+  virtual void sem() = 0;
 };
 
 class ASTId : public ASTNode {
