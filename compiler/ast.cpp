@@ -41,115 +41,6 @@ SymbolEntry * lookup(string id) {
   return lookupEntry(id.c_str(), LOOKUP_ALL_SCOPES, true);
 }
 
-ASTNode::ASTNode() {
-  this->line = linecount;
-}
-
-ASTId::ASTId(string id, ASTNode *index) {
-  this->k = ID;
-  this->id = id;
-  this->index = index;
-}
-
-ASTInt::ASTInt(int n) {
-  this->k = INT;
-  this->n = n;
-}
-
-ASTChar::ASTChar(char c) {
-  this->k = CHAR;
-  this->c = c;
-}
-
-ASTString::ASTString(string id) {
-  this->k = STRING;
-  this->id = id;
-}
-
-ASTVdef::ASTVdef(string id, Type type, int n) {
-  this->k = VDEF;
-  this->id = id;
-  if (n == 0)
-    this->type = type;
-  else  // this variable is an array
-    this->type = typeArray(n, type);
-}
-
-ASTFdef::ASTFdef(ASTNode *fdecl, ASTNode *body) {
-  this->k = FDEF;
-  this->fdecl = fdecl;
-  this->body = body;
-}
-
-ASTFdecl::ASTFdecl(string name, Type type, ASTNode *param, ASTNode *locdef) {
-  this->k = FDECL;
-  this->name = name;
-  this->type = type;
-  this->param = param;
-  this->locdef = locdef;
-}
-
-ASTPar::ASTPar(string name, Type type, PassMode pm) {
-  this->name = name;
-  this->type = type;
-  if (pm == PASS_BY_VALUE)
-    this->k = PAR_VAL;
-  else
-    this->k = PAR_REF;
-}
-
-ASTAssign::ASTAssign(ASTNode *lval, ASTNode *expr) {
-  this->k = ASSIGN;
-  this->lval = lval;
-  this->expr = expr;
-}
-
-ASTFcall::ASTFcall(string name, ASTNode *param) {
-  this->k = FCALL;
-  this->name = name;
-  this->param = param;
-}
-
-ASTFcall_stmt::ASTFcall_stmt(ASTNode *fcall) {
-  this->k = FCALL_STMT;
-  this->fcall = fcall;
-}
-
-ASTIf::ASTIf(ASTNode *cond, ASTNode *ifstmt) {
-  this->k = IF;
-  this->cond = cond;
-  this->ifstmt = ifstmt;
-}
-
-ASTIfelse::ASTIfelse(ASTNode *ifnode, ASTNode *elsestmt) {
-  this->k = IFELSE;
-  this->ifnode = ifnode;
-  this->elsestmt = elsestmt;
-}
-
-ASTWhile::ASTWhile(ASTNode *cond, ASTNode *stmt) {
-  this->k = WHILE;
-  this->cond = cond;
-  this->stmt = stmt;
-}
-
-ASTRet::ASTRet(ASTNode *expr) {
-  this->k = RET;
-  this->expr = expr;
-}
-
-ASTSeq::ASTSeq(ASTNode *first, ASTNode *list) {
-  this->k = SEQ;
-  this->first = first;
-  this->list = list;
-}
-
-ASTOp::ASTOp(ASTNode *left, kind op, ASTNode *right) {
-  this->k = op;
-  this->left = left;
-  this->right = right;
-}
-
 void ASTId::sem() {
 	linecount = line;
   if (index) index->sem();
@@ -245,17 +136,14 @@ void ASTFdecl::sem() {
 
 void ASTPar::sem() {
 	linecount = line;
-  switch (k) {
-    case PAR_VAL:
+  if (pm == PASS_BY_VALUE) {
     if (type->kind == TYPE_ARRAY || type->kind == TYPE_IARRAY)
       error("an array can not be passed by value as a parameter to a function");
     newParameter(name.c_str(), type, PASS_BY_VALUE, currFunction);
-    return;
-
-    case PAR_REF:
-    newParameter(name.c_str(), type, PASS_BY_REFERENCE, currFunction);
-    return;
   }
+  else
+    newParameter(name.c_str(), type, PASS_BY_REFERENCE, currFunction);
+  return;
 }
 
 void ASTAssign::sem() {
@@ -391,7 +279,7 @@ void ASTOp::sem() {
 	linecount = line;
   left->sem();
   right->sem();
-  switch (k) {
+  switch (op) {
     case PLUS:
     if (left == NULL) {
       if (!equalType(right->type, typeInteger))

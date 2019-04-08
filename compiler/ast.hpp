@@ -2,7 +2,10 @@
 #define __AST_HPP__
 
 #include <string>
+#include "general.hpp"
 #include "symbol.hpp"
+
+using namespace std;
 
 typedef struct f_node {
   SymbolEntry * function;
@@ -10,31 +13,26 @@ typedef struct f_node {
 } * func;
 
 typedef enum {
-  ID, INT, CHAR, STRING,										            	// terminals
-  VDEF, FDEF, FDECL, PAR_VAL, PAR_REF,		            		// definitions
-  ASSIGN, FCALL, FCALL_STMT, IF, IFELSE, WHILE, RET, SEQ, // statements
   EQ, NE, LE, GE, LT, GT, AND, OR, NOT,		             		// condition operators
   PLUS, MINUS, TIMES, DIV, MOD,				             				// expression operators
 } kind;
 
 class ASTNode {
 public:
-  kind k;
-  Type type;
   int line;
 
-  ASTNode();
+  ASTNode() : line(linecount) {};
   void sem();
 };
 
 class ASTId : public ASTNode {
 public:
-  std::string id;
+  string id;
   ASTNode *index;
   int nesting_diff;
   int offset;
 
-  ASTId(std::string id, ASTNode *index);
+  ASTId(string id, ASTNode *index) : id(id), index(index) {};
   void sem();
 };
 
@@ -42,7 +40,7 @@ class ASTInt : public ASTNode {
 public:
   int n;
   
-  ASTInt(int n);
+  ASTInt(int n) : n(n) {};
   void sem();
 };
 
@@ -50,24 +48,29 @@ class ASTChar : public ASTNode {
 public:
   char c;
   
-  ASTChar(char c);
+  ASTChar(char c) : c(c) {};
   void sem();
 };
 
 class ASTString : public ASTNode {
 public:
-  std::string id;
+  string id;
   
-  ASTString(std::string id);
+  ASTString(string id) : id(id) {};
   void sem();
 };
 
 class ASTVdef : public ASTNode {
 public:
-  std::string id;
-  int n;    // n>0 for array, n=0 otherwise
+  string id;
+  Type type;
 
-  ASTVdef(std::string id, Type type, int n);
+  ASTVdef(string id, Type type, int n) : id(id) {
+    if (n == 0)
+      this->type = type;
+    else  // this variable is an array
+      this->type = typeArray(n, type);
+  };
   void sem();
 };
 
@@ -76,7 +79,7 @@ public:
   ASTNode *first;
   ASTNode *list;
 
-  ASTSeq(ASTNode *first, ASTNode *list);
+  ASTSeq(ASTNode *first, ASTNode *list) : first(first), list(list) {};
   void sem();
 };
 
@@ -85,27 +88,30 @@ public:
   ASTNode *fdecl;
   ASTNode *body;
 
-  ASTFdef(ASTNode *fdecl, ASTNode *body);
+  ASTFdef(ASTNode *fdecl, ASTNode *body) : fdecl(fdecl), body(body) {};
   void sem();
 };
 
 class ASTFdecl : public ASTNode {
 public:
-  std::string name;
+  string name;
+  Type type;
   ASTNode *param;
   ASTNode *locdef;
   int num_vars;     // for SCOPES (of functions)
 
-  ASTFdecl(std::string name, Type type, ASTNode *param, ASTNode *locdef);
+  ASTFdecl(string name, Type type, ASTNode *param, ASTNode *locdef) :
+    name(name), type(type), param(param), locdef(locdef) {};
   void sem();
 };
 
 class ASTPar : public ASTNode {
 public:
-  std::string name;
+  string name;
+  Type type;
   PassMode pm;
 
-  ASTPar(std::string name, Type type, PassMode pm);
+  ASTPar(string name, Type type, PassMode pm) : name(name), type(type), pm(pm) {};
   void sem();
 };
 
@@ -117,16 +123,16 @@ public:
   // int nesting_diff;
   // int offset;
 
-  ASTAssign(ASTNode *lval, ASTNode *expr);
+  ASTAssign(ASTNode *lval, ASTNode *expr) : lval(lval), expr(expr) {};
   void sem();
 };
 
 class ASTFcall : public ASTNode {
 public:
-  std::string name;
+  string name;
   ASTNode *param;
 
-  ASTFcall(std::string name, ASTNode *param);
+  ASTFcall(string name, ASTNode *param) : name(name), param(param) {};
   void sem();
 };
 
@@ -134,7 +140,7 @@ class ASTFcall_stmt : public ASTNode {
 public:
   ASTNode *fcall;
 
-  ASTFcall_stmt(ASTNode *fcall);
+  ASTFcall_stmt(ASTNode *fcall) : fcall(fcall) {};
   void sem();
 };
 
@@ -143,7 +149,7 @@ public:
   ASTNode *cond;
   ASTNode *ifstmt;
 
-  ASTIf(ASTNode *cond, ASTNode *ifstmt);
+  ASTIf(ASTNode *cond, ASTNode *ifstmt) : cond(cond), ifstmt(ifstmt) {};
   void sem();
 };
 
@@ -152,7 +158,7 @@ public:
   ASTNode *ifnode;
   ASTNode *elsestmt;
 
-  ASTIfelse(ASTNode *ifnode, ASTNode *elsestmt);
+  ASTIfelse(ASTNode *ifnode, ASTNode *elsestmt) : ifnode(ifnode), elsestmt(elsestmt) {};
   void sem();
 };
 
@@ -161,7 +167,7 @@ public:
   ASTNode *cond;
   ASTNode *stmt;
 
-  ASTWhile(ASTNode *cond, ASTNode *stmt);
+  ASTWhile(ASTNode *cond, ASTNode *stmt) : cond(cond), stmt(stmt) {};
   void sem();
 };
 
@@ -169,7 +175,7 @@ class ASTRet : public ASTNode {
 public:
   ASTNode *expr;
 
-  ASTRet(ASTNode *expr);
+  ASTRet(ASTNode *expr) : expr(expr) {};
   void sem();
 };
 
@@ -179,7 +185,7 @@ public:
   ASTNode *left;
   ASTNode *right;
 
-  ASTOp(ASTNode *left, kind op, ASTNode *right);
+  ASTOp(ASTNode *left, kind op, ASTNode *right) : op(op), left(left), right(right) {};
   void sem();
 };
 
