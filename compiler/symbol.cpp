@@ -307,7 +307,7 @@ SymbolEntry * newConstant (const char * name, Type type, ...)
             case TYPE_ARRAY:
                 strcpy(buffer, "\"");
                 strAppendString(buffer, value.vString);
-                strcat(buffer, "\"");           
+                strcat(buffer, "\"");
         }
         e = newEntry(buffer);
     }

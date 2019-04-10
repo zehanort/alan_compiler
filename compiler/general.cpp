@@ -24,7 +24,7 @@
    --------------------------------------------------------------------- */
 
 #include <stdlib.h>
-#include <string>
+#include <string.h>
 #include "general.hpp"
 
 /* ---------------------------------------------------------------------
@@ -42,6 +42,15 @@ void * mynew (size_t size) {
 void mydelete (void * p) {
    if (p != NULL)
       free(p);
+}
+
+char *stringCopy(char *s) {
+  char *result = NULL;
+  if (s) {
+    result = (char *)mynew((strlen(s) + 1) * sizeof(char));
+    strcpy(result, s);
+  }
+  return result;
 }
 
 /* ---------------------------------------------------------------------

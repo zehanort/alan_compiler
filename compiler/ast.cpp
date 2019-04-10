@@ -241,8 +241,6 @@ void ASTIf::sem() {
 void ASTIfelse::sem() {
 	linecount = line;
   left->sem();
-  if (!equalType(left->type, typeBoolean))
-    error("if expects a boolean condition");
   if (right) right->sem();
   return;
 }

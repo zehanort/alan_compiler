@@ -1,6 +1,7 @@
 #ifndef __AST_HPP__
 #define __AST_HPP__
 
+#include <iostream>
 #include <string>
 #include "general.hpp"
 #include "symbol.hpp"
