@@ -3,7 +3,6 @@
 
 #include <iostream>
 #include <string>
-#include <stack>
 #include "general.hpp"
 #include "symbol.hpp"
 

@@ -2,6 +2,7 @@
 #include "general.hpp"
 #include "symbol.hpp"
 #include "ast.hpp"
+#include <stack>
 
 using namespace std;
 
