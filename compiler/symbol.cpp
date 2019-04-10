@@ -145,7 +145,7 @@ void initSymbolTable (unsigned int size)
     /* Αρχικοποίηση του πίνακα κατακερματισμού */
     
     hashTableSize = size;
-    hashTable = (SymbolEntry **) new(size * sizeof(SymbolEntry *));
+    hashTable = (SymbolEntry **) mynew(size * sizeof(SymbolEntry *));
     
     for (i = 0; i < size; i++)
         hashTable[i] = NULL;
@@ -161,12 +161,12 @@ void destroySymbolTable ()
         if (hashTable[i] != NULL)
             destroyEntry(hashTable[i]);
 
-    delete(hashTable);
+    mydelete(hashTable);
 }
 
 void openScope ()
 {
-    Scope * newScope = (Scope *) new(sizeof(Scope));
+    Scope * newScope = (Scope *) mynew(sizeof(Scope));
 
     newScope->negOffset = START_NEGATIVE_OFFSET;
     newScope->parent    = currentScope;
@@ -194,7 +194,7 @@ void closeScope ()
     }
     
     currentScope = currentScope->parent;
-    delete(t);
+    mydelete(t);
 }
 
 static void insertEntry (SymbolEntry * e)
@@ -219,8 +219,8 @@ static SymbolEntry * newEntry (const char * name)
 
     /* Αρχικοποίηση όλων εκτός: entryType και u */
 
-    e = (SymbolEntry *) new(sizeof(SymbolEntry));
-    e->id = (const char *) new(strlen(name) + 1);
+    e = (SymbolEntry *) mynew(sizeof(SymbolEntry));
+    e->id = (const char *) mynew(strlen(name) + 1);
 
     strcpy((char *) (e->id), name);
     e->hashValue    = PJW_hash(name) % hashTableSize;
@@ -274,7 +274,7 @@ SymbolEntry * newConstant (const char * name, Type type, ...)
             if (equalType(type->refType, typeChar)) {
                 RepString str = va_arg(ap, RepString);
                 
-                value.vString = (const char *) new(strlen(str) + 1);
+                value.vString = (const char *) mynew(strlen(str) + 1);
                 strcpy((char *) (value.vString), str);
                 break;
             }
@@ -496,7 +496,7 @@ void destroyEntry (SymbolEntry * e)
             break;
         case ENTRY_CONSTANT:
             if (e->u.eConstant.type->kind == TYPE_ARRAY)
-                delete((char *) (e->u.eConstant.value.vString));
+                mydelete((char *) (e->u.eConstant.value.vString));
             destroyType(e->u.eConstant.type);
             break;
         case ENTRY_FUNCTION:
@@ -505,9 +505,9 @@ void destroyEntry (SymbolEntry * e)
                 SymbolEntry * p = args;
                 
                 destroyType(args->u.eParameter.type);
-                delete((char *) (args->id));
+                mydelete((char *) (args->id));
                 args = args->u.eParameter.next;
-                delete(p);
+                mydelete(p);
             }
             destroyType(e->u.eFunction.resultType);
             break;
@@ -518,8 +518,8 @@ void destroyEntry (SymbolEntry * e)
             destroyType(e->u.eTemporary.type);
             break;
     }
-    delete((char *) (e->id));
-    delete(e);        
+    mydelete((char *) (e->id));
+    mydelete(e);        
 }
 
 SymbolEntry * lookupEntry (const char * name, LookupType type, bool err)
@@ -551,7 +551,7 @@ SymbolEntry * lookupEntry (const char * name, LookupType type, bool err)
 
 Type typeArray (RepInteger size, Type refType)
 {
-    Type n = (Type) new(sizeof(struct Type_tag));
+    Type n = (Type) mynew(sizeof(struct Type_tag));
 
     n->kind     = TYPE_ARRAY;
     n->refType  = refType;
@@ -565,7 +565,7 @@ Type typeArray (RepInteger size, Type refType)
 
 Type typeIArray (Type refType)
 {
-    Type n = (Type) new(sizeof(struct Type_tag));
+    Type n = (Type) mynew(sizeof(struct Type_tag));
 
     n->kind     = TYPE_IARRAY;
     n->refType  = refType;
@@ -578,7 +578,7 @@ Type typeIArray (Type refType)
 
 Type typePointer (Type refType)
 {
-    Type n = (Type) new(sizeof(struct Type_tag));
+    Type n = (Type) mynew(sizeof(struct Type_tag));
 
     n->kind     = TYPE_POINTER;
     n->refType  = refType;
@@ -597,7 +597,7 @@ void destroyType (Type type)
         case TYPE_POINTER:
             if (--(type->refCount) == 0) {
                 destroyType(type->refType);
-                delete(type);
+                mydelete(type);
             }
     }
 }

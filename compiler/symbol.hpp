@@ -93,6 +93,11 @@ typedef enum {
    ENTRY_TEMPORARY                       /* Προσωρινές μεταβλητές      */
 } EntryType;
 
+typedef enum {                               /* Κατάσταση παραμέτρων  */
+   PARDEF_COMPLETE,                    /* Πλήρης ορισμός     */
+   PARDEF_DEFINE,                      /* Εν μέσω ορισμού    */
+   PARDEF_CHECK                        /* Εν μέσω ελέγχου    */
+} pardef_t;
 
 /* Τύποι περάσματος παραμετρων */
 
@@ -137,11 +142,7 @@ struct SymbolEntry_tag {
          SymbolEntry * firstArgument;         /* Λίστα παραμέτρων      */
          SymbolEntry * lastArgument;          /* Τελευταία παράμετρος  */
          Type          resultType;            /* Τύπος αποτελέσματος   */
-         enum {                               /* Κατάσταση παραμέτρων  */
-             PARDEF_COMPLETE,                    /* Πλήρης ορισμός     */
-             PARDEF_DEFINE,                      /* Εν μέσω ορισμού    */
-             PARDEF_CHECK                        /* Εν μέσω ελέγχου    */
-         } pardef;
+         pardef_t pardef;
          int           firstQuad;             /* Αρχική τετράδα        */
       } eFunction;
 

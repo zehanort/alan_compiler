@@ -43,7 +43,7 @@ SymbolEntry * lookup(string id) {
 
 void ASTId::sem() {
 	linecount = line;
-  if (index) index->sem();
+  if (left) left->sem();
   SymbolEntry *e = lookup(id);
   if (!e) {     // ID not found; dummy value for type
     type = typeBoolean;
@@ -51,7 +51,7 @@ void ASTId::sem() {
   }
   switch (e->entryType) {
     case ENTRY_VARIABLE:
-    if (index == NULL)
+    if (left == NULL)
       type = e->u.eVariable.type;
     else {
       if (e->u.eVariable.type->kind != TYPE_ARRAY && e->u.eVariable.type->kind != TYPE_IARRAY)
@@ -61,7 +61,7 @@ void ASTId::sem() {
     break;
 
     case ENTRY_PARAMETER:
-    if (index == NULL)
+    if (left == NULL)
       type = e->u.eParameter.type;
     else {
       if (e->u.eParameter.type->kind != TYPE_ARRAY && e->u.eParameter.type->kind != TYPE_IARRAY)
@@ -110,8 +110,8 @@ void ASTVdef::sem() {
 
 void ASTFdef::sem() {
 	linecount = line;
-  fdecl->sem();
-  if (body) body->sem();
+  left->sem();
+  if (right) right->sem();
   closeScope();
   if (!funcList->prev) currFunction = NULL;
   else goToPrevFunction();
@@ -120,16 +120,16 @@ void ASTFdef::sem() {
 
 void ASTFdecl::sem() {
 	linecount = line;
-  SymbolEntry * f = newFunction(name.c_str());
+  SymbolEntry * f = newFunction(id.c_str());
   openScope();
   if (!funcList) createFuncList(f);
   else addFunctionToList(f);
   // in case of error in function declaration:
   if (!f)
     return;
-  if (param) param->sem();
+  if (left) left->sem();
   endFunctionHeader(currFunction, type);
-  if (locdef) locdef->sem();
+  if (right) right->sem();
   num_vars = currentScope->negOffset;
   return;
 }
@@ -139,40 +139,40 @@ void ASTPar::sem() {
   if (pm == PASS_BY_VALUE) {
     if (type->kind == TYPE_ARRAY || type->kind == TYPE_IARRAY)
       error("an array can not be passed by value as a parameter to a function");
-    newParameter(name.c_str(), type, PASS_BY_VALUE, currFunction);
+    newParameter(id.c_str(), type, PASS_BY_VALUE, currFunction);
   }
   else
-    newParameter(name.c_str(), type, PASS_BY_REFERENCE, currFunction);
+    newParameter(id.c_str(), type, PASS_BY_REFERENCE, currFunction);
   return;
 }
 
 void ASTAssign::sem() {
 	linecount = line;
-  lval->sem();
-  if (lval->type->kind == TYPE_ARRAY || lval->type->kind == TYPE_IARRAY)
+  left->sem();
+  if (left->type->kind == TYPE_ARRAY || left->type->kind == TYPE_IARRAY)
     error("left side of assignment can not be an array");
-  expr->sem();
-  SymbolEntry * e = lookupEntry(lval->id, LOOKUP_ALL_SCOPES, false);
+  right->sem();
+  SymbolEntry * e = lookupEntry(left->id.c_str(), LOOKUP_ALL_SCOPES, false);
   if (!e)
     return;
-  if (expr->type==NULL)
+  if (right->type==NULL)
     return;
-  if (!equalType(lval->type, expr->type))
+  if (!equalType(left->type, right->type))
     error("type mismatch in assignment");
   return;
 }
 
 void ASTFcall::sem() {
 	linecount = line;
-  SymbolEntry * f = lookup(name);
+  SymbolEntry * f = lookup(id);
   if (!f)
     return;
   if (f->entryType != ENTRY_FUNCTION)
-    error("%s is not a function", name);
+    error("%s is not a function", id);
   type = f->u.eFunction.resultType;
-  if (param) param->sem();
+  if (left) left->sem();
 
-  ASTNode *currPar = param;
+  ASTNode *currPar = left;
   SymbolEntry *expectedPar = f->u.eFunction.firstArgument;
 
   while (currPar) {
@@ -182,18 +182,18 @@ void ASTFcall::sem() {
     }
 
     Type expectedParType = expectedPar->u.eParameter.type;
-    Type currParType = currPar->first->type;
+    Type currParType = currPar->left->type;
 
     if (expectedPar->u.eParameter.mode == PASS_BY_REFERENCE) {
     // if actual parameter:
     // --> has no id
-      if (!currPar->first->id) {
+      if (currPar->left->id.empty()) {
         error("parameters passed by reference must be l-values");
         return;
       }
       // --> is not an l-value
-      Type charArrayType = typeArray(strlen(currPar->first->id), typeChar);
-      if (!equalType(currParType, charArrayType) && !lookupEntry(currPar->first->id, LOOKUP_ALL_SCOPES, false)) {
+      Type charArrayType = typeArray(currPar->left->id.length(), typeChar);
+      if (!equalType(currParType, charArrayType) && !lookupEntry(currPar->left->id.c_str(), LOOKUP_ALL_SCOPES, false)) {
         error("parameters passed by reference must be l-values");
         return;
       }
@@ -209,7 +209,7 @@ void ASTFcall::sem() {
       if (!equalType(expectedParType, currParType))
         error("function parameter type mismatch");
     }
-    currPar = currPar->list;
+    currPar = currPar->right;
     expectedPar = expectedPar->u.eParameter.next;
   }
 
@@ -220,8 +220,8 @@ void ASTFcall::sem() {
 
 void ASTFcall_stmt::sem() {
 	linecount = line;
-  fcall->sem();
-  SymbolEntry * f = lookupEntry(fcall->name, LOOKUP_ALL_SCOPES, false);
+  left->sem();
+  SymbolEntry * f = lookupEntry(left->id.c_str(), LOOKUP_ALL_SCOPES, false);
   if (!f)
     return;
   if (f->u.eFunction.resultType->kind != TYPE_VOID)
@@ -231,26 +231,28 @@ void ASTFcall_stmt::sem() {
 
 void ASTIf::sem() {
 	linecount = line;
-  cond->sem();
-  if (!equalType(cond->type, typeBoolean))
+  left->sem();
+  if (!equalType(left->type, typeBoolean))
     error("if expects a boolean condition");
-  if (ifstmt) ifstmt->sem();
+  if (right) right->sem();
   return;
 }
 
 void ASTIfelse::sem() {
 	linecount = line;
-  ifnode->sem();
-  if (elsestmt) elsestmt->sem();
+  left->sem();
+  if (!equalType(left->type, typeBoolean))
+    error("if expects a boolean condition");
+  if (right) right->sem();
   return;
 }
 
 void ASTWhile::sem() {
 	linecount = line;
-  cond->sem();
-  if (!equalType(cond->type, typeBoolean))
+  left->sem();
+  if (!equalType(left->type, typeBoolean))
     error("while loop expects a boolean condition");
-  if (stmt) stmt->sem();
+  if (right) right->sem();
   return;
 }
 
@@ -258,9 +260,9 @@ void ASTRet::sem() {
 	linecount = line;
   if (!currFunction)    // no current function? what?
     internal("return expression used outside of function body");
-    else if (expr) {    // if we have the form "return e", check e and function result type
-      expr->sem();
-    if (!equalType(currFunction->u.eFunction.resultType, expr->type))
+    else if (left) {    // if we have the form "return e", check e and function result type
+      left->sem();
+    if (!equalType(currFunction->u.eFunction.resultType, left->type))
       error("result type of function and return value mismatch");
   }
   else if (currFunction->u.eFunction.resultType->kind != TYPE_VOID)   // if we have the form "return" and fun is not proc
@@ -270,8 +272,8 @@ void ASTRet::sem() {
 
 void ASTSeq::sem() {
 	linecount = line;
-  first->sem();
-  if (list) list->sem();
+  left->sem();
+  if (right) right->sem();
   return;
 }
 
