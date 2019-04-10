@@ -5,30 +5,9 @@
 
 using namespace std;
 
-SymbolEntry * currFunction;
-func funcList = NULL;
-
-void createFuncList(SymbolEntry * firstFunction) {
-   funcList = new struct f_node;
-   funcList->function = firstFunction;
-   funcList->prev = NULL;
-   currFunction = funcList->function;
-}
-
-void addFunctionToList(SymbolEntry * newFunction) {
-   func newFunc = new struct f_node;
-   newFunc->function = newFunction;
-   newFunc->prev = funcList;
-   funcList = newFunc;
-   currFunction = funcList->function;
-}
-
-void goToPrevFunction() {
-   func temp = funcList->prev;
-   delete(funcList);
-   funcList = temp;
-   currFunction = funcList->function;   
-}
+/* some globals to keep track of functions */
+stack<SymbolEntry *> funcList;
+SymbolEntry *currFunction;
 
 void checkTypes(Type l, Type r, const char *op) {
   if (!equalType(l, r))
@@ -113,19 +92,19 @@ void ASTFdef::sem() {
   left->sem();
   if (right) right->sem();
   closeScope();
-  if (!funcList->prev) currFunction = NULL;
-  else goToPrevFunction();
+  funcList.pop();
+  if (funcList.empty()) currFunction = NULL;
+  else currFunction = funcList.top();
   return;
 }
 
 void ASTFdecl::sem() {
 	linecount = line;
-  SymbolEntry * f = newFunction(id.c_str());
+  currFunction = newFunction(id.c_str());
   openScope();
-  if (!funcList) createFuncList(f);
-  else addFunctionToList(f);
+  funcList.push(currFunction);
   // in case of error in function declaration:
-  if (!f)
+  if (!currFunction)
     return;
   if (left) left->sem();
   endFunctionHeader(currFunction, type);
@@ -256,10 +235,10 @@ void ASTWhile::sem() {
 
 void ASTRet::sem() {
 	linecount = line;
-  if (!currFunction)    // no current function? what?
+  if (!currFunction)  // no current function? what?
     internal("return expression used outside of function body");
-    else if (left) {    // if we have the form "return e", check e and function result type
-      left->sem();
+  else if (left) {    // if we have the form "return e", check e and function result type
+    left->sem();
     if (!equalType(currFunction->u.eFunction.resultType, left->type))
       error("result type of function and return value mismatch");
   }

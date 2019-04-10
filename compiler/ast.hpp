@@ -3,15 +3,11 @@
 
 #include <iostream>
 #include <string>
+#include <stack>
 #include "general.hpp"
 #include "symbol.hpp"
 
 using namespace std;
-
-typedef struct f_node {
-  SymbolEntry * function;
-  struct f_node * prev;
-} * func;
 
 typedef enum {
   EQ, NE, LE, GE, LT, GT, AND, OR, NOT, // condition operators
