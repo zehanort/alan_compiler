@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "ast.h"
-#include "codegen.hpp"
+//#include "codegen.hpp"
 #include "symbol.h"
 #include "general.h"
 #include "error.h"
