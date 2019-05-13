@@ -35,7 +35,7 @@ ast.o      : ast.cpp ast.hpp
 	$(CXX) $(CXXFLAGS) -c $<
 
 alan: lexer.o parser.o ast.o symbol.o error.o general.o
-	$(CXX) $(CXXFLAGS) -o alan $^ -lfl
+	$(CXX) $(CXXFLAGS) -o alan $^ /usr/lib/x86_64-linux-gnu/libfl.a
 
 clean:
 	$(RM) lexer.cpp parser.cpp parser.hpp parser.output *.o *~
