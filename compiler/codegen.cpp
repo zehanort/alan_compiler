@@ -37,183 +37,202 @@ inline ConstantInt* c32(int n) {
  * semantic check)                     *
  ***************************************/
 
-Value * codegen(ast t) {
-  if (t == nullptr) return nullptr;
-  switch (t->k) {
+void ASTId::codegen() {
+  switch (e->entryType) {
+    case ENTRY_VARIABLE:
+
+    case ENTRY_PARAMETER:
+
+    case ENTRY_FUNCTION:
+
+    default:
+  }
+}
+
+void ASTInt::codegen() {
+  return c32(t->num);
+}
+
+void ASTChar::codegen() {
+  return c8(t->num);
+}
+
+void ASTString::codegen() {
+  return Builder.CreateGlobalStringPtr(this->id);
+}
+
+void ASTVdef::codegen() {
+}
+
+void ASTFdef::codegen() {
+}
+
+void ASTFdecl::codegen() {
+}
+
+void ASTPar::codegen() {
+}
+
+void ASTAssign::codegen() {
+}
+
+void ASTFcall::codegen() {
+}
+
+void ASTFcall_stmt::codegen() {
+}
+
+void ASTIf::codegen() {
+  Value *CondV = this->left->codegen();
+  Function *TheFunction = Builder.GetInsertBlock()->getParent();
+  BasicBlock *ThenBB  = BasicBlock::Create(TheContext, "then", TheFunction);
+  BasicBlock *MergeBB = BasicBlock::Create(TheContext, "endif", TheFunction);
+  Builder.CreateCondBr(CondV, ThenBB, MergeBB);
+
+  // Emit then block
+  Builder.SetInsertPoint(ThenBB);
+  this->right->codegen();
+  Builder.CreateBr(MergeBB);
   
-  case ID:
+  // Change Insert Point
+  Builder.SetInsertPoint(MergeBB);
+  return nullptr;
+}
 
-  case INT:
-    return c32(t->num);
+void ASTIfelse::codegen() {
+  Value *CondV = this->left->left->codegen();
+  Function *TheFunction = Builder.GetInsertBlock()->getParent();
+  BasicBlock *ThenBB  = BasicBlock::Create(TheContext, "then", TheFunction);
+  BasicBlock *ElseBB  = BasicBlock::Create(TheContext, "else", TheFunction);
+  BasicBlock *MergeBB = BasicBlock::Create(TheContext, "endif", TheFunction);
+  Builder.CreateCondBr(CondV, ThenBB, ElseBB);
 
-  case CHAR:
-    return c8(t->num);
+  // Emit then block
+  Builder.SetInsertPoint(ThenBB);
+  this->left->right->codegen();
+  Builder.CreateBr(MergeBB);
+  
+  // Emit else block
+  Builder.SetInsertPoint(ElseBB);
+  this->right->codegen();
+  Builder.CreateBr(MergeBB);
 
-  case STRING:
-    return Builder.CreateGlobalStringPtr(t->id);
+  // Change Insert Point
+  Builder.SetInsertPoint(MergeBB);
+  return nullptr;
+}
 
-  case VDEF:
-    
-  case FDEF:
-    
-  case FDECL:
-    
-  case PAR_VAL:
+void ASTWhile::codegen() {
+  Function *TheFunction = Builder.GetInsertBlock()->getParent();
+  BasicBlock *CondBB = BasicBlock::Create(TheContext, "cond", TheFunction);
+  BasicBlock *LoopBB = BasicBlock::Create(TheContext, "loop", TheFunction);
+  BasicBlock *AfterBB = BasicBlock::Create(TheContext, "after", TheFunction);
+  
+  // Emit Condition block
+  Builder.SetInsertPoint(CondBB);
+  Value *CondV = this->left->codegen();
+  Builder.CreateCondBr(CondV, LoopBB, AfterBB);
+  // Emit Loop block
+  Builder.SetInsertPoint(LoopBB);
+  this->right->codegen();
+  Builder.CreateBr(CondBB);
+  Builder.SetInsertPoint(AfterBB);
+  return nullptr;
+}
 
-  case PAR_REF:
+void ASTRet::codegen() {
+}
 
-  case ASSIGN:
+void ASTSeq::codegen() {
+  this->left->codegen();
+  this->right->codegen();
+  return;
+}
 
-  case IF: {
-    Value *CondV = codegen(t->left);
-    Function *TheFunction = Builder.GetInsertBlock()->getParent();
-    BasicBlock *ThenBB  = BasicBlock::Create(TheContext, "then", TheFunction);
-    BasicBlock *MergeBB = BasicBlock::Create(TheContext, "endif", TheFunction);
-    Builder.CreateCondBr(CondV, ThenBB, MergeBB);
+void ASTOp::codegen() {
+  switch (this->op) {
+    case PLUS: {
+      Value *l = this->left->codegen();
+      Value *r = this->right->codegen();
+      return Builder.CreateAdd(l, r, "addtmp");
+    }
+      
+    case MINUS: {
+      Value *l = this->left->codegen();
+      Value *r = this->right->codegen();
+      return Builder.CreateSub(l, r, "subtmp");
+    }
+      
+    case TIMES: {
+      Value *l = this->left->codegen();
+      Value *r = this->right->codegen();
+      return Builder.CreateMul(l, r, "multmp");
+    }
+      
+    case DIV: {
+      Value *l = this->left->codegen();
+      Value *r = this->right->codegen();
+      return Builder.CreateSDiv(l, r, "divtmp");
+    }
 
-    // Emit then block
-    Builder.SetInsertPoint(ThenBB);
-    codegen(t->right);
-    Builder.CreateBr(MergeBB);
-    
-    // Change Insert Point
-    Builder.SetInsertPoint(MergeBB);
-    return nullptr;
-  }
+    case MOD: {
+      Value *l = this->left->codegen();
+      Value *r = this->right->codegen();
+      return Builder.CreateSRem(l, r, "modtmp");
+    }
+      
+    case EQ: {
+      Value *l = this->left->codegen();
+      Value *r = this->right->codegen();
+      return Builder.CreateICmpEQ(l, r, "eqtmp");
+    }
 
-  case IFELSE: {
-    Value *CondV = codegen(t->left->left);
-    Function *TheFunction = Builder.GetInsertBlock()->getParent();
-    BasicBlock *ThenBB  = BasicBlock::Create(TheContext, "then", TheFunction);
-    BasicBlock *ElseBB  = BasicBlock::Create(TheContext, "else", TheFunction);
-    BasicBlock *MergeBB = BasicBlock::Create(TheContext, "endif", TheFunction);
-    Builder.CreateCondBr(CondV, ThenBB, ElseBB);
+    case NE: {
+      Value *l = this->left->codegen();
+      Value *r = this->right->codegen();
+      return Builder.CreateICmpNE(l, r, "neqtmp");
+    }
 
-    // Emit then block
-    Builder.SetInsertPoint(ThenBB);
-    codegen(t->left->right);
-    Builder.CreateBr(MergeBB);
-    
-    // Emit else block
-    Builder.SetInsertPoint(ElseBB);
-    codegen(t->right);
-    Builder.CreateBr(MergeBB);
+    case LT: {
+      Value *l = this->left->codegen();
+      Value *r = this->right->codegen();
+      return Builder.CreateICmpSLT(l, r, "lttmp");
+    }
 
-    // Change Insert Point
-    Builder.SetInsertPoint(MergeBB);
-    return nullptr;
-  }
+    case LE: {
+      Value *l = this->left->codegen();
+      Value *r = this->right->codegen();
+      return Builder.CreateICmpSLE(l, r, "letmp");
+    }
 
-  case WHILE: {
-    Function *TheFunction = Builder.GetInsertBlock()->getParent();
-    BasicBlock *CondBB = BasicBlock::Create(TheContext, "cond", TheFunction);
-    BasicBlock *LoopBB = BasicBlock::Create(TheContext, "loop", TheFunction);
-    BasicBlock *AfterBB = BasicBlock::Create(TheContext, "after", TheFunction);
-    
-    // Emit Condition block
-    Builder.SetInsertPoint(CondBB);
-    Value *CondV = codegen(t->left);
-    Builder.CreateCondBr(CondV, LoopBB, AfterBB);
-    // Emit Loop block
-    Builder.SetInsertPoint(LoopBB);
-    codegen(t->right);
-    Builder.CreateBr(CondBB);
-    Builder.SetInsertPoint(AfterBB);
-    return nullptr;
-  }
+    case GT: {
+      Value *l = this->left->codegen();
+      Value *r = this->right->codegen();
+      return Builder.CreateICmpSGT(l, r, "gttmp");
+    }
 
-  case RET:
+    case GE: {
+      Value *l = this->left->codegen();
+      Value *r = this->right->codegen();
+      return Builder.CreateICmpSGE(l, r, "getmp");
+    }
 
-  case SEQ:
-    codegen(t->left);
-    codegen(t->right);
-    return;
+    case AND: {
+      Value *l = this->left->codegen();
+      Value *r = this->right->codegen();
+      return Builder.CreateAnd(l, r, "andtmp");
+    }
 
-  case FCALL:
+    case OR: {
+      Value *l = this->left->codegen();
+      Value *r = this->right->codegen();
+      return Builder.CreateOr(l, r, "ortmp");
+    }
 
-  case FCALL_STMT:
-
-  case PLUS: {
-    Value *l = codegen(t->left);
-    Value *r = codegen(t->right);
-    return Builder.CreateAdd(l, r, "addtmp");
-  }
-    
-  case MINUS: {
-    Value *l = codegen(t->left);
-    Value *r = codegen(t->right);
-    return Builder.CreateSub(l, r, "subtmp");
-  }
-    
-  case TIMES: {
-    Value *l = codegen(t->left);
-    Value *r = codegen(t->right);
-    return Builder.CreateMul(l, r, "multmp");
-  }
-    
-  case DIV: {
-    Value *l = codegen(t->left);
-    Value *r = codegen(t->right);
-    return Builder.CreateSDiv(l, r, "divtmp");
-  }
-
-  case MOD: {
-    Value *l = codegen(t->left);
-    Value *r = codegen(t->right);
-    return Builder.CreateSRem(l, r, "modtmp");
-  }
-    
-  case EQ: {
-    Value *l = codegen(t->left);
-    Value *r = codegen(t->right);
-    return Builder.CreateICmpEQ(l, r, "eqtmp");
-  }
-
-  case NE: {
-    Value *l = codegen(t->left);
-    Value *r = codegen(t->right);
-    return Builder.CreateICmpNE(l, r, "neqtmp");
-  }
-
-  case LT: {
-    Value *l = codegen(t->left);
-    Value *r = codegen(t->right);
-    return Builder.CreateICmpSLT(l, r, "lttmp");
-  }
-
-  case LE: {
-    Value *l = codegen(t->left);
-    Value *r = codegen(t->right);
-    return Builder.CreateICmpSLE(l, r, "letmp");
-  }
-
-  case GT: {
-    Value *l = codegen(t->left);
-    Value *r = codegen(t->right);
-    return Builder.CreateICmpSGT(l, r, "gttmp");
-  }
-
-  case GE: {
-    Value *l = codegen(t->left);
-    Value *r = codegen(t->right);
-    return Builder.CreateICmpSGE(l, r, "getmp");
-  }
-
-  case AND: {
-    Value *l = codegen(t->left);
-    Value *r = codegen(t->right);
-    return Builder.CreateAnd(l, r, "andtmp");
-  }
-
-  case OR: {
-    Value *l = codegen(t->left);
-    Value *r = codegen(t->right);
-    return Builder.CreateOr(l, r, "ortmp");
-  }
-
-  case NOT: {
-    Value *l = codegen(t->left);
-    Value *r = codegen(t->right);
-    return Builder.CreateNot(l, r, "nottmp");
+    case NOT: {
+      Value *l = this->left->codegen();
+      Value *r = this->right->codegen();
+      return Builder.CreateNot(l, r, "nottmp");
+    }
   }
 }

@@ -18,6 +18,4 @@
 #include <llvm/Transforms/Scalar/GVN.h>
 #endif
 
-Value * codegen(ast t);
-
 #endif
