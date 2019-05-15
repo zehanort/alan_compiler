@@ -94,7 +94,11 @@ public:
         scopeLogs.back().varTypes[id] = type;
         scopeLogs.back().varAddrs[id] = addr;
         scopeLogs.back().ptrValues[id] = points_to;
-    }
+    };
+
+    void addParameter(string id, llvm::Type *type, PassMode pm) {
+        
+    };
 
     llvm::Type * getVarType(string id) {
         for (auto it = this->scopeLogs.rbegin(); it != this->scopeLogs.rend(); ++i) {
@@ -106,7 +110,7 @@ public:
     };
 
     llvm::AllocaInst * getVarAddr(string id) {
-        for (auto it = this->scopeLogs.rbegin(); it != this->scopeLogs.rend(); ++i) {
+        for (auto it = this->scopeLogs.rbegin(); it != this->scopeLogs.rend(); ++it) {
             if (!(it->varAddrs.find(id) == it->varAddrs.end()))
                 return it->varAddrs[id];
         }
@@ -115,7 +119,7 @@ public:
     };
 
     llvm::AllocaInst * getPtrValue(string id) {
-        for (auto it = this->scopeLogs.rbegin(); it != this->scopeLogs.rend(); ++i) {
+        for (auto it = this->scopeLogs.rbegin(); it != this->scopeLogs.rend(); ++it) {
             if (!(it->ptrValues.find(id) == it->ptrValues.end()))
                 return it->ptrValues[id];
         }
@@ -124,7 +128,7 @@ public:
     }
 
     bool isPointer(string id) {
-        for (auto it = this->scopeLogs.rbegin(); it != this->scopeLogs.rend(); ++i) {
+        for (auto it = this->scopeLogs.rbegin(); it != this->scopeLogs.rend(); ++it) {
             if (!(it->varTypes.find(id) == it->varTypes.end()))
                 return it->varTypes[id]->isPointerTy();
         }

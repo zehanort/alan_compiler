@@ -91,8 +91,7 @@ llvm::Value * ASTFdecl::codegen() {
 }
 
 llvm::Value * ASTPar::codegen() {
-  logger.addParam(this->id, type_to_llvm(this->type), this->pm);
-  logger.addVariable(); //?????????????????????
+  logger.addParameter(this->id, type_to_llvm(this->type), this->pm);
   return nullptr;
 }
 
