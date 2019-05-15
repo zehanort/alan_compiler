@@ -1,89 +1,145 @@
 #include "codegen.hpp"
 
-using namespace llvm;
-
-/******************************
- * Global LLVM variables      *
- * related to the LLVM suite. *
- ******************************/
-static LLVMContext TheContext;
-static IRBuilder<> Builder(TheContext);
-static std::unique_ptr<Module> TheModule;
-static std::unique_ptr<legacy::FunctionPassManager> TheFPM;
-
-// Global LLVM variables related to the generated code.
-static Function *TheWriteInteger;
-static Function *TheWriteString;
-
-// Useful LLVM types.
-static Type * i8 = IntegerType::get(TheContext, 8);
-static Type * i16 = IntegerType::get(TheContext, 16);
-static Type * i32 = IntegerType::get(TheContext, 32);
-static Type * i64 = IntegerType::get(TheContext, 64);
-
-// Useful LLVM helper functions...
-// ...for bytes
-inline ConstantInt* c8(char c) {
-  return ConstantInt::get(TheContext, APInt(8, c, true));
-}
-// ...for integers
-inline ConstantInt* c32(int n) {
-  return ConstantInt::get(TheContext, APInt(32, n, true));
-}
-
-/***************************************
- * THE CODEGEN FUNCTION                *
- * creates IR code (after a successful *
- * semantic check)                     *
- ***************************************/
-
-void ASTId::codegen() {
-  switch (e->entryType) {
-    case ENTRY_VARIABLE:
-
-    case ENTRY_PARAMETER:
-
-    case ENTRY_FUNCTION:
-
-    default:
+llvm::Type * type_to_llvm(Type type, PassMode pm) {
+  llvm::Type *llvmtype;
+  switch (type->kind) {
+    case TYPE_VOID:
+      llvmtype = proc;
+      break;
+    case TYPE_BOOLEAN:
+    case TYPE_INTEGER:
+      llvmtype = i32;
+      break;
+    case TYPE_CHAR:
+      llvmtype = i8;
+      break;
+    case TYPE_ARRAY:
+      llvmtype = llvm::ArrayType::get(type_to_llvm(type->refType), sizeOfType(type));
+      break;
+    case TYPE_IARRAY:
+      llvmtype = type_to_llvm(type->refType);
   }
+  if (pm == PASS_BY_REFERENCE) return llvmtype->getPointerTo();
+  return llvmtype;
 }
 
-void ASTInt::codegen() {
-  return c32(t->num);
+/*******************************************************
+ * THE CODEGEN FUNCTION                                *
+ * creates IR code (after a successful semantic check) *
+ *******************************************************/
+
+Logger logger;
+
+llvm::Value * ASTId::codegen() {
+  /* id is an array */
+  if (var->type = TYPE_ARRAY) {
+    auto *index = this->left->left->codegen();
+    llvm::Value *retval;
+    /* var is array by reference */
+    if (logger.isPointer(var->id)) {
+      auto *tmp = Builder.CreateLoad(logger.getPtrValue(var->id));
+      auto *addr = Builder.CreateGEP(tmp, index);
+      return Builder.CreateLoad(addr);
+    }
+    /* var is a simple array */
+    else {
+      auto *addr = Builder.CreateGEP(
+        logger.getVarAddr(this->id),
+        std::vector<llvm::Value *>{c32(0), index}
+      );
+      return Builder.CreateLoad(addr);
+    }
+  }
+  /* id is a simple variable */
+  else {
+    /* variable is by reference */
+    if (logger.isPointer(this->id)) {
+      auto *addr = Builder.CreateLoad(logger.getPtrValue(this->id));
+      return Builder.CreateLoad(addr);
+    }
+    /* variable is not by reference */
+    else Builder.CreateLoad(logger.getVarAddr(this->id));
+  }
+  /* should be unreachable */
+  return nullptr;
 }
 
-void ASTChar::codegen() {
-  return c8(t->num);
+llvm::Value * ASTInt::codegen() {
+  return c32(this->num);
 }
 
-void ASTString::codegen() {
+llvm::Value * ASTChar::codegen() {
+  return c8(this->id[0]);
+}
+
+llvm::Value * ASTString::codegen() {
   return Builder.CreateGlobalStringPtr(this->id);
 }
 
-void ASTVdef::codegen() {
+llvm::Value * ASTVdef::codegen() {
+  auto *vtype = type_to_llvm(this->type);
+  auto *valloca = Builder.CreateAlloca(vtype, nullptr, this->id);
+  /* log variable to be able to retrieve it later */
+  logger.addVariable(this->id, vtype, valloca);
+  return nullptr;
 }
 
-void ASTFdef::codegen() {
+llvm::Value * ASTFdef::codegen() {
 }
 
-void ASTFdecl::codegen() {
+llvm::Value * ASTFdecl::codegen() {
 }
 
-void ASTPar::codegen() {
+llvm::Value * ASTPar::codegen() {
+  logger.addParam(this->id, type_to_llvm(this->type), this->pm);
+  logger.addVariable(); //?????????????????????
+  return nullptr;
 }
 
-void ASTAssign::codegen() {
+llvm::Value * ASTAssign::codegen() {
+  auto *expr = this->right->codegen();
+  /* var is array */
+  if (var->type = TYPE_ARRAY) {
+    auto *index = this->left->left->codegen();
+    llvm::Value *retval;
+    /* var is array by reference */
+    if (logger.isPointer(var->id)) {
+      retval = Builder.CreateLoad(logger.getPtrValue(var->id));
+      retval = Builder.CreateGEP(retval, index);
+    }
+    /* var is a simple array */
+    else {
+      retval = Builder.CreateGEP(
+        logger.getVarAddr(var->id),
+        vector<llvm::Value *>{c32(0), index}
+      );
+    }
+    return Builder.CreateStore(expr, retval);
+  }
+  /* var is a simple variable */
+  else {
+    auto *var = this->left->codegen();
+    /* var is a pointer */
+    if (logger.isPointer(var->id)) {
+      auto *varAddr = Builder.CreateLoad(logger.getPtrValue(var->id));
+      return Builder.CreateStore(expr, varAddr);
+    }
+    /* var is not a pointer */
+    else return Builder.CreateStore(expr, logger.getVarAddr(var->id));
+  }
+  /* should be unreachable */
+  return nullptr;
 }
 
-void ASTFcall::codegen() {
+llvm::Value * ASTFcall::codegen() {
 }
 
-void ASTFcall_stmt::codegen() {
+llvm::Value * ASTFcall_stmt::codegen() {
+  return this->left->codegen();
 }
 
-void ASTIf::codegen() {
-  Value *CondV = this->left->codegen();
+llvm::Value * ASTIf::codegen() {
+  llvm::Value *CondV = this->left->codegen();
   Function *TheFunction = Builder.GetInsertBlock()->getParent();
   BasicBlock *ThenBB  = BasicBlock::Create(TheContext, "then", TheFunction);
   BasicBlock *MergeBB = BasicBlock::Create(TheContext, "endif", TheFunction);
@@ -99,8 +155,8 @@ void ASTIf::codegen() {
   return nullptr;
 }
 
-void ASTIfelse::codegen() {
-  Value *CondV = this->left->left->codegen();
+llvm::Value * ASTIfelse::codegen() {
+  llvm::Value *CondV = this->left->left->codegen();
   Function *TheFunction = Builder.GetInsertBlock()->getParent();
   BasicBlock *ThenBB  = BasicBlock::Create(TheContext, "then", TheFunction);
   BasicBlock *ElseBB  = BasicBlock::Create(TheContext, "else", TheFunction);
@@ -122,7 +178,7 @@ void ASTIfelse::codegen() {
   return nullptr;
 }
 
-void ASTWhile::codegen() {
+llvm::Value * ASTWhile::codegen() {
   Function *TheFunction = Builder.GetInsertBlock()->getParent();
   BasicBlock *CondBB = BasicBlock::Create(TheContext, "cond", TheFunction);
   BasicBlock *LoopBB = BasicBlock::Create(TheContext, "loop", TheFunction);
@@ -130,7 +186,7 @@ void ASTWhile::codegen() {
   
   // Emit Condition block
   Builder.SetInsertPoint(CondBB);
-  Value *CondV = this->left->codegen();
+  llvm::Value *CondV = this->left->codegen();
   Builder.CreateCondBr(CondV, LoopBB, AfterBB);
   // Emit Loop block
   Builder.SetInsertPoint(LoopBB);
@@ -140,99 +196,35 @@ void ASTWhile::codegen() {
   return nullptr;
 }
 
-void ASTRet::codegen() {
+llvm::Value * ASTRet::codegen() {
+  if (this->left == nullptr) return Builder.CreateRetVoid();
+  return Builder.CreateRet(this->left->codegen());
 }
 
-void ASTSeq::codegen() {
+llvm::Value * ASTSeq::codegen() {
   this->left->codegen();
   this->right->codegen();
-  return;
+  return nullptr;
 }
 
-void ASTOp::codegen() {
+llvm::Value * ASTOp::codegen() {
+  llvm::Value *l = this->left->codegen();
+  llvm::Value *r = this->right->codegen();
   switch (this->op) {
-    case PLUS: {
-      Value *l = this->left->codegen();
-      Value *r = this->right->codegen();
-      return Builder.CreateAdd(l, r, "addtmp");
-    }
-      
-    case MINUS: {
-      Value *l = this->left->codegen();
-      Value *r = this->right->codegen();
-      return Builder.CreateSub(l, r, "subtmp");
-    }
-      
-    case TIMES: {
-      Value *l = this->left->codegen();
-      Value *r = this->right->codegen();
-      return Builder.CreateMul(l, r, "multmp");
-    }
-      
-    case DIV: {
-      Value *l = this->left->codegen();
-      Value *r = this->right->codegen();
-      return Builder.CreateSDiv(l, r, "divtmp");
-    }
-
-    case MOD: {
-      Value *l = this->left->codegen();
-      Value *r = this->right->codegen();
-      return Builder.CreateSRem(l, r, "modtmp");
-    }
-      
-    case EQ: {
-      Value *l = this->left->codegen();
-      Value *r = this->right->codegen();
-      return Builder.CreateICmpEQ(l, r, "eqtmp");
-    }
-
-    case NE: {
-      Value *l = this->left->codegen();
-      Value *r = this->right->codegen();
-      return Builder.CreateICmpNE(l, r, "neqtmp");
-    }
-
-    case LT: {
-      Value *l = this->left->codegen();
-      Value *r = this->right->codegen();
-      return Builder.CreateICmpSLT(l, r, "lttmp");
-    }
-
-    case LE: {
-      Value *l = this->left->codegen();
-      Value *r = this->right->codegen();
-      return Builder.CreateICmpSLE(l, r, "letmp");
-    }
-
-    case GT: {
-      Value *l = this->left->codegen();
-      Value *r = this->right->codegen();
-      return Builder.CreateICmpSGT(l, r, "gttmp");
-    }
-
-    case GE: {
-      Value *l = this->left->codegen();
-      Value *r = this->right->codegen();
-      return Builder.CreateICmpSGE(l, r, "getmp");
-    }
-
-    case AND: {
-      Value *l = this->left->codegen();
-      Value *r = this->right->codegen();
-      return Builder.CreateAnd(l, r, "andtmp");
-    }
-
-    case OR: {
-      Value *l = this->left->codegen();
-      Value *r = this->right->codegen();
-      return Builder.CreateOr(l, r, "ortmp");
-    }
-
-    case NOT: {
-      Value *l = this->left->codegen();
-      Value *r = this->right->codegen();
-      return Builder.CreateNot(l, r, "nottmp");
-    }
+    case PLUS:  return Builder.CreateAdd(l, r, "addtmp");
+    case MINUS: return Builder.CreateSub(l, r, "subtmp");
+    case TIMES: return Builder.CreateMul(l, r, "multmp");
+    case DIV:   return Builder.CreateSDiv(l, r, "divtmp");
+    case MOD:   return Builder.CreateSRem(l, r, "modtmp");
+    case EQ:    return Builder.CreateICmpEQ(l, r, "eqtmp");
+    case NE:    return Builder.CreateICmpNE(l, r, "neqtmp");
+    case LT:    return Builder.CreateICmpSLT(l, r, "lttmp");
+    case LE:    return Builder.CreateICmpSLE(l, r, "letmp");
+    case GT:    return Builder.CreateICmpSGT(l, r, "gttmp");
+    case GE:    return Builder.CreateICmpSGE(l, r, "getmp");
+    case AND:   return Builder.CreateAnd(l, r, "andtmp");
+    case OR:    return Builder.CreateOr(l, r, "ortmp");
+    case NOT:   return Builder.CreateNot(l, r, "nottmp");
   }
+  return nullptr;
 }
