@@ -34,7 +34,6 @@ llvm::Value * ASTId::codegen() {
   /* id is an array */
   if (var->type = TYPE_ARRAY) {
     auto *index = this->left->left->codegen();
-    llvm::Value *retval;
     /* var is array by reference */
     if (logger.isPointer(var->id)) {
       auto *tmp = Builder.CreateLoad(logger.getPtrValue(var->id));
@@ -85,10 +84,64 @@ llvm::Value * ASTVdef::codegen() {
 }
 
 llvm::Value * ASTFdef::codegen() {
+  logger.openScope();
+
+  ASTSeq *params = this->left->left;
+  string funcName = this->left->id;
+  llvm::Type *retType = type_to_llvm(this->left->type);
+  vector<string> parameterNames;
+  vector<llvm::Type *> parameterTypes;
+
+  /* step 1: log param types and names */
+  while (params != nullptr) {
+    params->left->codegen();
+    parameterNames.push_back(params->left->id);
+    parameterTypes.push_back(type_to_llvm(params->left->type));
+    params = params->right;
+  }
+
+  llvm::FunctionType *FT =
+    llvm::FunctionType::get(retType, parameterTypes, false);
+
+  llvm::Function *F =
+    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, funcName, TheModule.get());
+
+  /* step 2: set all param names */
+  unsigned Idx = 0;
+  for (auto &arg : F->args()) arg.setName(parameterNames[Idx++]);
+
+  /* step 3: create function instertion block */
+  llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", F);
+  Builder.SetInsertPoint(BB);
+
+  /* step 4: log params as scope variables */
+  for (auto &arg : F->args()) {
+    auto *alloca = Builder.CreateAlloca(arg.getType(), nullptr, arg.getName());
+    Builder.CreateStore(&arg, alloca);
+    /* log param for later usage */
+    if (logger.isPointer(arg.getName()))
+      logger.addPointer(arg.getName(), arg.getType(), alloca);
+    else
+      logger.addVariable(arg.getName(), arg.getType(), alloca);
+  }
+
+  /* step 5: check if return was omitted */
+  /* --- case 1: function is proc, and return was omitted */
+  if (F->getReturnType()->isVoidTy()) Builder.CreateRetVoid();
+  /* --- case 2: return omitted, make it return 0 of the appropriate type */
+  else if (!logger.returnAddedInScopeFunction()) {
+    if (F->getReturnType()->isIntegerTy(32)) Builder.CreateRet(c32(0));
+    else Builder.CreateRet(c8(0));
+  }
+
+  /* step 6: codegen body, verify, done */
+  this->right->codegen();
+  llvm::verifyFunction(*F);
+  logger.closeScope();
+  return nullptr;
 }
 
-llvm::Value * ASTFdecl::codegen() {
-}
+// llvm::Value * ASTFdecl::codegen() {}
 
 llvm::Value * ASTPar::codegen() {
   logger.addParameter(this->id, type_to_llvm(this->type), this->pm);
@@ -98,7 +151,7 @@ llvm::Value * ASTPar::codegen() {
 llvm::Value * ASTAssign::codegen() {
   auto *expr = this->right->codegen();
   /* var is array */
-  if (var->type = TYPE_ARRAY) {
+  if (this->left->type = TYPE_ARRAY) {
     auto *index = this->left->left->codegen();
     llvm::Value *retval;
     /* var is array by reference */
@@ -196,6 +249,7 @@ llvm::Value * ASTWhile::codegen() {
 }
 
 llvm::Value * ASTRet::codegen() {
+  logger.addReturn();
   if (this->left == nullptr) return Builder.CreateRetVoid();
   return Builder.CreateRet(this->left->codegen());
 }

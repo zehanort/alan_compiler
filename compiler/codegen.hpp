@@ -52,6 +52,7 @@ typedef struct {
     unordered_map<string, llvm::Type*> variableTypes;
     unordered_map<string, llvm::AllocaInst*> variableAddresses;
     unordered_map<string, llvm::AllocaInst*> pointerValues;
+    bool returnAdded;
 } scopeLog;
 
 class Logger {
@@ -64,22 +65,23 @@ public:
     
     void openScope() {
         scopeLog sl;
-        scopeLogs.push_back(sl);
+        sl.returnAdded = false;
+        this->scopeLogs.push_back(sl);
     };
     
     void closeScope() {
-        scopeLogs.pop_back();
+        this->scopeLogs.pop_back();
     };
 
     void addVariable(string id, llvm::Type *type, llvm::AllocaInst *addr) {
-        scopeLogs.back().variableTypes[id] = type;
-        scopeLogs.back().variableAddresses[id] = addr;
+        this->scopeLogs.back()->variableTypes[id] = type;
+        this->scopeLogs.back()->variableAddresses[id] = addr;
     };
 
     void addPointer(string id, llvm::Type *type, llvm::AllocaInst *addr, llvm::AllocaInst *points_to) {
-        scopeLogs.back().variableTypes[id] = type;
-        scopeLogs.back().variableAddresses[id] = addr;
-        scopeLogs.back().pointerValues[id] = points_to;
+        this->scopeLogs.back()->variableTypes[id] = type;
+        this->scopeLogs.back()->variableAddresses[id] = addr;
+        this->scopeLogs.back()->pointerValues[id] = points_to;
     };
 
     void addParameter(string id, llvm::Type *type, PassMode pm) {
@@ -124,6 +126,14 @@ public:
         /* if sem was ok, this point should be unreachable */
         fatal("Variable \"%s\" not in scope.", id);
         return false;
+    };
+
+    void addReturn() {
+        this->scopeLogs.back()->returnAdded = true;
+    };
+
+    bool returnAddedInScopeFunction() {
+        return this->scopeLogs.back()->returnAdded;
     };
 };
 
