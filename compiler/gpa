@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+
+from requests import session
+from getpass import getpass
+from bs4 import BeautifulSoup as bs
+
+username = input('Username: ')
+password = getpass()
+
+s = session()
+
+login_url = 'https://www.central.ntua.gr/login'
+
+login_attempt = s.post(
+    url=login_url,
+    data={
+        'username' : username,
+        'password' : password
+    }
+)
+
+login_attempt_html = bs(login_attempt.text, features='lxml')
+if login_attempt_html.find('button', {'data-dismiss': 'alert'}):
+    print('Problem while attempting to log in.')
+    print('Site reports:', login_attempt_html.find('p', {'class': ''}).string.strip())
+    exit(-1)
+
+print('Successfully logged in as', username)
+print('Please wait...')
+
+main_url = 'https://www.central.ntua.gr/login/studdata'
+courses_table = bs(s.get(main_url).text, features='lxml').find('table', {'class': 'display table table-striped'})
+courses_data = courses_table.find('tbody').find_all('tr')
+
+grades = []
+
+for course_data in courses_data:
+    course_grades = list(map(lambda x : 0 if x == '-' else int(x),
+        list(map(lambda x : x.string.strip(), course_data.find_all('td')))[5:]))
+    grades.append(max(course_grades))
+
+courses_passed = len(grades)
+gpa = sum(grades)/courses_passed
+
+print('GPA: {:.2f}'.format(sum(grades)/len(grades)))
+print('You have passed {} out of 60 courses ({:.2f}%)'.format(courses_passed, courses_passed/0.6))

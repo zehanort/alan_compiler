@@ -61,7 +61,6 @@ public:
     Logger() {
         this->openScope();
     };
-    ~Logger() {};
     
     void openScope() {
         scopeLog sl;
