@@ -48,23 +48,10 @@ inline llvm::ConstantInt* c32(int n) {
 
 llvm::Type *type_to_llvm(Type type, PassMode pm);
 
-/* Utilities for book-keeping while codegen-ing */
-// class ScopeLogger {
-// private:
-//     unordered_map<string, llvm::Type*> varTypes;
-//     unordered_map<string, llvm::AllocaInst*> varAddrs;
-// public:
-//     ScopeLogger() {};
-//     ~ScopeLogger() {};
-//     void addVariable(string id, llvm::Type* type, llvm::AllocaInst* alloca) {
-//         varTypes[id] = type;
-//         varAddrs[id] = alloca;
-//     }
-// }
 typedef struct {
-    unordered_map<string, llvm::Type*> varTypes;
-    unordered_map<string, llvm::AllocaInst*> varAddrs;
-    unordered_map<string, llvm::AllocaInst*> ptrValues;
+    unordered_map<string, llvm::Type*> variableTypes;
+    unordered_map<string, llvm::AllocaInst*> variableAddresses;
+    unordered_map<string, llvm::AllocaInst*> pointerValues;
 } scopeLog;
 
 class Logger {
@@ -86,14 +73,14 @@ public:
     };
 
     void addVariable(string id, llvm::Type *type, llvm::AllocaInst *addr) {
-        scopeLogs.back().varTypes[id] = type;
-        scopeLogs.back().varAddrs[id] = addr;
+        scopeLogs.back().variableTypes[id] = type;
+        scopeLogs.back().variableAddresses[id] = addr;
     };
 
     void addPointer(string id, llvm::Type *type, llvm::AllocaInst *addr, llvm::AllocaInst *points_to) {
-        scopeLogs.back().varTypes[id] = type;
-        scopeLogs.back().varAddrs[id] = addr;
-        scopeLogs.back().ptrValues[id] = points_to;
+        scopeLogs.back().variableTypes[id] = type;
+        scopeLogs.back().variableAddresses[id] = addr;
+        scopeLogs.back().pointerValues[id] = points_to;
     };
 
     void addParameter(string id, llvm::Type *type, PassMode pm) {
@@ -102,37 +89,41 @@ public:
 
     llvm::Type * getVarType(string id) {
         for (auto it = this->scopeLogs.rbegin(); it != this->scopeLogs.rend(); ++i) {
-            if (!(it->varTypes.find(id) == it->varTypes.end()))
-                return it->varTypes[id];
+            if (!(it->variableTypes.find(id) == it->variableTypes.end()))
+                return it->variableTypes[id];
         }
         /* if sem was ok, this point should be unreachable */
+        fatal("Variable \"%s\" not in scope.", id);
         return false;
     };
 
     llvm::AllocaInst * getVarAddr(string id) {
         for (auto it = this->scopeLogs.rbegin(); it != this->scopeLogs.rend(); ++it) {
-            if (!(it->varAddrs.find(id) == it->varAddrs.end()))
-                return it->varAddrs[id];
+            if (!(it->variableAddresses.find(id) == it->variableAddresses.end()))
+                return it->variableAddresses[id];
         }
         /* if sem was ok, this point should be unreachable */
+        fatal("Variable \"%s\" not in scope.", id);
         return false;
     };
 
     llvm::AllocaInst * getPtrValue(string id) {
         for (auto it = this->scopeLogs.rbegin(); it != this->scopeLogs.rend(); ++it) {
-            if (!(it->ptrValues.find(id) == it->ptrValues.end()))
-                return it->ptrValues[id];
+            if (!(it->pointerValues.find(id) == it->pointerValues.end()))
+                return it->pointerValues[id];
         }
         /* if sem was ok, this point should be unreachable */
+        fatal("Variable \"%s\" not in scope.", id);
         return false;
     }
 
     bool isPointer(string id) {
         for (auto it = this->scopeLogs.rbegin(); it != this->scopeLogs.rend(); ++it) {
-            if (!(it->varTypes.find(id) == it->varTypes.end()))
-                return it->varTypes[id]->isPointerTy();
+            if (!(it->variableTypes.find(id) == it->variableTypes.end()))
+                return it->variableTypes[id]->isPointerTy();
         }
         /* if sem was ok, this point should be unreachable */
+        fatal("Variable \"%s\" not in scope.", id);
         return false;
     };
 };
