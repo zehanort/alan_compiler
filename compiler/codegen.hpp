@@ -50,8 +50,7 @@ llvm::Type *type_to_llvm(Type type, PassMode pm);
 
 typedef struct {
     unordered_map<string, llvm::Type*> variableTypes;
-    unordered_map<string, llvm::AllocaInst*> variableAddresses;
-    unordered_map<string, llvm::AllocaInst*> pointerValues;
+    unordered_map<string, llvm::AllocaInst*> variableAllocas;
     bool returnAdded;
 } scopeLog;
 
@@ -73,19 +72,9 @@ public:
         this->scopeLogs.pop_back();
     };
 
-    void addVariable(string id, llvm::Type *type, llvm::AllocaInst *addr) {
+    void addVariable(string id, llvm::Type *type, llvm::AllocaInst *alloca) {
         this->scopeLogs.back()->variableTypes[id] = type;
-        this->scopeLogs.back()->variableAddresses[id] = addr;
-    };
-
-    void addPointer(string id, llvm::Type *type, llvm::AllocaInst *addr, llvm::AllocaInst *points_to) {
-        this->scopeLogs.back()->variableTypes[id] = type;
-        this->scopeLogs.back()->variableAddresses[id] = addr;
-        this->scopeLogs.back()->pointerValues[id] = points_to;
-    };
-
-    void addParameter(string id, llvm::Type *type, PassMode pm) {
-        
+        this->scopeLogs.back()->variableAllocas[id] = alloca;
     };
 
     llvm::Type * getVarType(string id) {
@@ -98,25 +87,15 @@ public:
         return false;
     };
 
-    llvm::AllocaInst * getVarAddr(string id) {
+    llvm::AllocaInst * getVarAlloca(string id) {
         for (auto it = this->scopeLogs.rbegin(); it != this->scopeLogs.rend(); ++it) {
-            if (!(it->variableAddresses.find(id) == it->variableAddresses.end()))
-                return it->variableAddresses[id];
+            if (!(it->variableAllocas.find(id) == it->variableAllocas.end()))
+                return it->variableAllocas[id];
         }
         /* if sem was ok, this point should be unreachable */
         fatal("Variable \"%s\" not in scope.", id);
         return false;
     };
-
-    llvm::AllocaInst * getPtrValue(string id) {
-        for (auto it = this->scopeLogs.rbegin(); it != this->scopeLogs.rend(); ++it) {
-            if (!(it->pointerValues.find(id) == it->pointerValues.end()))
-                return it->pointerValues[id];
-        }
-        /* if sem was ok, this point should be unreachable */
-        fatal("Variable \"%s\" not in scope.", id);
-        return false;
-    }
 
     bool isPointer(string id) {
         for (auto it = this->scopeLogs.rbegin(); it != this->scopeLogs.rend(); ++it) {

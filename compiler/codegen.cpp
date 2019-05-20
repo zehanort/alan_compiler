@@ -32,20 +32,18 @@ Logger logger;
 
 llvm::Value * ASTId::codegen() {
   /* id is an array */
-  if (var->type = TYPE_ARRAY) {
+  if (this->type = TYPE_ARRAY) {
     auto *index = this->left->left->codegen();
     /* var is array by reference */
-    if (logger.isPointer(var->id)) {
-      auto *tmp = Builder.CreateLoad(logger.getPtrValue(var->id));
-      auto *addr = Builder.CreateGEP(tmp, index);
+    if (logger.isPointer(this->id)) {
+      auto *arr = Builder.CreateLoad(logger.getVarAlloca(this->id));
+      auto *addr = Builder.CreateGEP(arr, index);
       return Builder.CreateLoad(addr);
     }
     /* var is a simple array */
     else {
-      auto *addr = Builder.CreateGEP(
-        logger.getVarAddr(this->id),
-        std::vector<llvm::Value *>{c32(0), index}
-      );
+      auto *addr = Builder.CreateGEP(logger.getVarAlloca(this->id), index);
+      // auto *addr = Builder.CreateGEP(logger.getVarAlloca(this->id), vector<llvm::Value *>{c32(0), index});!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       return Builder.CreateLoad(addr);
     }
   }
@@ -53,11 +51,11 @@ llvm::Value * ASTId::codegen() {
   else {
     /* variable is by reference */
     if (logger.isPointer(this->id)) {
-      auto *addr = Builder.CreateLoad(logger.getPtrValue(this->id));
+      auto *addr = Builder.CreateLoad(logger.getVarAlloca(this->id));
       return Builder.CreateLoad(addr);
     }
     /* variable is not by reference */
-    else Builder.CreateLoad(logger.getVarAddr(this->id));
+    else Builder.CreateLoad(logger.getVarAlloca(this->id));
   }
   /* should be unreachable */
   return nullptr;
@@ -87,6 +85,7 @@ llvm::Value * ASTFdef::codegen() {
   logger.openScope();
 
   ASTSeq *params = this->left->left;
+  ASTSeq *locdefs = this->left->right;
   string funcName = this->left->id;
   llvm::Type *retType = type_to_llvm(this->left->type);
   vector<string> parameterNames;
@@ -94,9 +93,8 @@ llvm::Value * ASTFdef::codegen() {
 
   /* step 1: log param types and names */
   while (params != nullptr) {
-    params->left->codegen();
     parameterNames.push_back(params->left->id);
-    parameterTypes.push_back(type_to_llvm(params->left->type));
+    parameterTypes.push_back(type_to_llvm(params->left->type, params->left->pm));
     params = params->right;
   }
 
@@ -114,18 +112,21 @@ llvm::Value * ASTFdef::codegen() {
   llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", F);
   Builder.SetInsertPoint(BB);
 
-  /* step 4: log params as scope variables */
+  /* step 4: create allocas for params */
   for (auto &arg : F->args()) {
-    auto *alloca = Builder.CreateAlloca(arg.getType(), nullptr, arg.getName());
+  	auto *alloca = Builder.CreateAlloca(arg.getType(), nullptr, arg.getName());
     Builder.CreateStore(&arg, alloca);
-    /* log param for later usage */
-    if (logger.isPointer(arg.getName()))
-      logger.addPointer(arg.getName(), arg.getType(), alloca);
-    else
-      logger.addVariable(arg.getName(), arg.getType(), alloca);
+    logger.addVariable(arg.getName(), arg.getType(), alloca);
   }
 
-  /* step 5: check if return was omitted */
+  /* step 5: codegen local defs and body */
+  while (locdefs != nullptr) {
+    locdefs->left->codegen();
+    locdefs = locdefs->right;
+  }
+  this->right->codegen();
+
+  /* step 6: check if return was omitted */
   /* --- case 1: function is proc, and return was omitted */
   if (F->getReturnType()->isVoidTy()) Builder.CreateRetVoid();
   /* --- case 2: return omitted, make it return 0 of the appropriate type */
@@ -134,8 +135,7 @@ llvm::Value * ASTFdef::codegen() {
     else Builder.CreateRet(c8(0));
   }
 
-  /* step 6: codegen body, verify, done */
-  this->right->codegen();
+  /* step 7: verify, done */
   llvm::verifyFunction(*F);
   logger.closeScope();
   return nullptr;
@@ -143,48 +143,59 @@ llvm::Value * ASTFdef::codegen() {
 
 // llvm::Value * ASTFdecl::codegen() {}
 
-llvm::Value * ASTPar::codegen() {
-  logger.addParameter(this->id, type_to_llvm(this->type), this->pm);
-  return nullptr;
-}
+// llvm::Value * ASTPar::codegen() {}
 
 llvm::Value * ASTAssign::codegen() {
   auto *expr = this->right->codegen();
+  llvm::Value *varAddr;
   /* var is array */
   if (this->left->type = TYPE_ARRAY) {
     auto *index = this->left->left->codegen();
-    llvm::Value *retval;
     /* var is array by reference */
-    if (logger.isPointer(var->id)) {
-      retval = Builder.CreateLoad(logger.getPtrValue(var->id));
-      retval = Builder.CreateGEP(retval, index);
-    }
+    if (logger.isPointer(this->left->id))
+    	varAddr = Builder.CreateGEP(Builder.CreateLoad(logger.getVarAlloca(this->left->id)), index);
     /* var is a simple array */
-    else {
-      retval = Builder.CreateGEP(
-        logger.getVarAddr(var->id),
-        vector<llvm::Value *>{c32(0), index}
-      );
-    }
-    return Builder.CreateStore(expr, retval);
+    else
+    	// varAddr = Builder.CreateGEP(logger.getVarAlloca(this->left->id), vector<llvm::Value *>{c32(0), index});!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    	varAddr = Builder.CreateGEP(logger.getVarAlloca(this->left->id), index);
   }
   /* var is a simple variable */
   else {
-    auto *var = this->left->codegen();
-    /* var is a pointer */
-    if (logger.isPointer(var->id)) {
-      auto *varAddr = Builder.CreateLoad(logger.getPtrValue(var->id));
-      return Builder.CreateStore(expr, varAddr);
-    }
+    if (logger.isPointer(this->left->id))
+      varAddr = Builder.CreateLoad(logger.getVarAlloca(this->left->id));
     /* var is not a pointer */
-    else return Builder.CreateStore(expr, logger.getVarAddr(var->id));
+    else
+    	varAddr = logger.getVarAlloca(this->left->id);
   }
-  /* should be unreachable */
-  return nullptr;
+  return Builder.CreateStore(expr, varAddr);
 }
 
+
+
+
+
 llvm::Value * ASTFcall::codegen() {
+	auto *F = theModule->getFunction(this->id);
+	vector<llvm::Value*> argv;
+	auto *ASTargs = this->left;
+
+	for (auto &Arg : F->args()) {
+		/* expecting parameter by reference */
+		if (Arg.getType()->isPointerTy()) {
+			/* expecting simple variable by reference */
+			if () {}
+			/* expecting array by reference */
+			else {}
+		}
+		/* expecting parameter by value */
+		else argv.push_back(ASTargs->left->codegen());
+		ASTargs = ASTargs->right;
+	}
+
+	return Builder.CreateCall(F, argv, "calltmp");
 }
+
+
 
 llvm::Value * ASTFcall_stmt::codegen() {
   return this->left->codegen();
