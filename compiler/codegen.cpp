@@ -170,10 +170,6 @@ llvm::Value * ASTAssign::codegen() {
   return Builder.CreateStore(expr, varAddr);
 }
 
-
-
-
-
 llvm::Value * ASTFcall::codegen() {
 	auto *F = theModule->getFunction(this->id);
 	vector<llvm::Value*> argv;
@@ -217,8 +213,6 @@ llvm::Value * ASTFcall::codegen() {
 
 	return Builder.CreateCall(F, argv, "calltmp");
 }
-
-
 
 llvm::Value * ASTFcall_stmt::codegen() {
   return this->left->codegen();

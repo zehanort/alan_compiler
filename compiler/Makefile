@@ -1,9 +1,8 @@
 .PHONY: clean distclean default
 
-CC=gcc
 CXX=g++
-CFLAGS=-Wall -g
-CXXFLAGS=-Wall -g -std=c++11
+CXXFLAGS=-Wall -g -std=c++11 `llvm-config --cxxflags`
+LDFLAGS=`llvm-config --ldflags --system-libs --libs all`
 
 default: alan
 
@@ -31,11 +30,14 @@ symbol.o   : symbol.cpp symbol.hpp general.hpp error.hpp
 ast.o      : ast.cpp ast.hpp
 	$(CXX) $(CXXFLAGS) -ansi -pedantic -c $<
 
-%.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $<
+codegen.o  : codegen.cpp codegen.hpp
+	$(CXX) $(CXXFLAGS) -ansi -pedantic -c $<	
 
-alan: lexer.o parser.o ast.o symbol.o error.o general.o
-	$(CXX) $(CXXFLAGS) -o alan $^ /usr/lib/x86_64-linux-gnu/libfl.a
+# %.o: %.cpp
+# 	$(CXX) $(CXXFLAGS) -c $<
+
+alan: lexer.o parser.o ast.o codegen.o symbol.o error.o general.o
+	$(CXX) $(CXXFLAGS) -o alan $^ $(LDFLAGS) /usr/lib/x86_64-linux-gnu/libfl.a
 
 clean:
 	$(RM) lexer.cpp parser.cpp parser.hpp parser.output *.o *~
