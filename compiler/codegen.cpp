@@ -179,17 +179,40 @@ llvm::Value * ASTFcall::codegen() {
 	vector<llvm::Value*> argv;
 	auto *ASTargs = this->left;
 
-	for (auto &Arg : F->args()) {
-		/* expecting parameter by reference */
-		if (Arg.getType()->isPointerTy()) {
-			/* expecting simple variable by reference */
-			if () {}
-			/* expecting array by reference */
-			else {}
-		}
-		/* expecting parameter by value */
-		else argv.push_back(ASTargs->left->codegen());
-		ASTargs = ASTargs->right;
+	for (auto &Arg : TheFunction->args()) {
+    llvm::Value *arg;
+    auto *ASTarg = ASTargs->left;
+    /* If expected argument is by reference */
+    if (Arg.getType()->isPointerTy()) {
+      /* string literal */
+      if (typeid(ASTarg) == typeid(new ASTString("")))
+        arg = ASTarg->codegen();
+      /* variable */
+      else {
+        if (ASTarg->type == TYPE_ARRAY) {
+          auto index = ASTarg->index->codegen();
+          if (logger.isPointer(ASTarg->id))
+            arg = Builder.CreateGEP(Builder.CreateLoad(logger.getVarAlloca(ASTarg->id)), index);
+          else
+            arg = Builder.CreateGEP(logger.getVarAlloca(ASTarg->id), index);
+        }
+        else {
+          if (logger.isPointer(ASTarg->id))
+            arg = Builder.CreateLoad(logger.getVarAlloca(ASTarg->id));
+          else {
+            if (logger.getVarType(ASTarg->id)->isArrayTy())
+              arg = Builder.CreateGEP(logger.getVarAlloca(ASTarg->id), c32(0));
+            else
+              arg = logger.getVarAlloca(ASTarg->id);
+          }
+        }
+      }
+    }
+    /* If expected argument is by value */
+    else
+      arg = ASTarg->codegen();
+    argv.push_back(arg);
+    ASTargs = ASTargs->right;
 	}
 
 	return Builder.CreateCall(F, argv, "calltmp");
