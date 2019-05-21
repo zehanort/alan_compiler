@@ -313,3 +313,7 @@ llvm::Value * ASTOp::codegen() {
   }
   return nullptr;
 }
+
+void wrapup() {
+  TheModule->print(llvm::outs(), nullptr);
+}

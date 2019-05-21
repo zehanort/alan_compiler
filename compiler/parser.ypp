@@ -207,5 +207,6 @@ int main(int argc, char *argv[]) {
 	printf("Semantic analysis of input program was completed.\n");
 	if (sem_failed) return sem_failed;
 	t->codegen();
+	wrapup();
 	return 0;
 }

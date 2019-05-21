@@ -26,7 +26,7 @@ extern const char* filename;
  ******************************/
 static llvm::LLVMContext TheContext;
 static llvm::IRBuilder<> Builder(TheContext);
-static std::unique_ptr<llvm::Module> TheModule;
+static std::unique_ptr<llvm::Module> TheModule = llvm::make_unique<llvm::Module>("module", TheContext);
 static std::unique_ptr<llvm::legacy::FunctionPassManager> TheFPM;
 
 // Global LLVM variables related to the generated code.
@@ -61,8 +61,6 @@ private:
     vector<scopeLog> scopeLogs;
 public:
     Logger() {
-        if (!filename) cout << "AAAAAAAAAAAAAAA" << endl;
-        TheModule = llvm::make_unique<llvm::Module>(filename, TheContext);
         this->openScope();
     };
     
@@ -119,5 +117,7 @@ public:
         return this->scopeLogs.back().returnAdded;
     };
 };
+
+void wrapup();
 
 #endif
