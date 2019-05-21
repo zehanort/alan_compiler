@@ -197,16 +197,13 @@ int main(int argc, char *argv[]) {
 	filename = argv[1];
 	linecount = 1;
 	if (yyparse()) return 1;
-	printf("Syntax analysis of input program was successful.\n");
 	initSymbolTable(997);
 	openScope();
 	initLibFunctions();
 	t->sem();
 	closeScope();
 	destroySymbolTable();
-	printf("Semantic analysis of input program was completed.\n");
 	if (sem_failed) return sem_failed;
-	t->codegen();
-	wrapup();
+	codegen(t);
 	return 0;
 }

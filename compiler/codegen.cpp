@@ -23,12 +23,46 @@ llvm::Type * type_to_llvm(Type type, PassMode pm = PASS_BY_VALUE) {
   return llvmtype;
 }
 
+Logger logger;
+
 /*******************************************************
  * THE CODEGEN FUNCTION                                *
  * creates IR code (after a successful semantic check) *
  *******************************************************/
 
-Logger logger;
+void createstdlib();
+
+/*** this is the main codegen function (called by main()) ***/
+void codegen(ASTNode *t) {
+  /* step 1: initiate the module */
+  TheModule = llvm::make_unique<llvm::Module>(filename, TheContext);
+  logger.openScope();
+
+  /* step 2: create alan stdlib functions */
+  createstdlib();
+
+  /* step 3: create the main function of the output program */
+  llvm::FunctionType *MainType =
+    llvm::FunctionType::get(i32, vector<llvm::Type*>{}, false);
+  llvm::Function *MainF =
+    llvm::Function::Create(MainType, llvm::Function::ExternalLinkage, "main", TheModule.get());
+  llvm::BasicBlock *MainBB =
+    llvm::BasicBlock::Create(TheContext, "entry", MainF);
+
+  /* step 4: create LLVM IR of input program */
+  t->codegen();
+
+  /* step 5: create a call to the main function */
+  llvm::Function *F = TheModule->getFunction(t->left->id);
+  Builder.SetInsertPoint(MainBB);
+  Builder.CreateCall(F, vector<llvm::Value*>{});
+  Builder.CreateRet(c32(0));
+  logger.closeScope();
+
+  /* emit LLVM IR to stdout */
+  TheModule->print(llvm::outs(), nullptr);
+  return;
+}
 
 llvm::Value * ASTId::codegen() {
   /* id is an array */
@@ -70,7 +104,7 @@ llvm::Value * ASTChar::codegen() {
 }
 
 llvm::Value * ASTString::codegen() {
-  return Builder.CreateGlobalStringPtr(this->id);
+  return Builder.CreateGlobalStringPtr(this->id.c_str());
 }
 
 llvm::Value * ASTVdef::codegen() {
@@ -213,7 +247,7 @@ llvm::Value * ASTFcall::codegen() {
     ASTargs = ASTargs->right;
 	}
 
-	return Builder.CreateCall(F, argv, "calltmp");
+	return Builder.CreateCall(F, argv);
 }
 
 llvm::Value * ASTFcall_stmt::codegen() {
@@ -314,6 +348,19 @@ llvm::Value * ASTOp::codegen() {
   return nullptr;
 }
 
-void wrapup() {
-  TheModule->print(llvm::outs(), nullptr);
+/* function that codegens ALAN stdlib functions */
+void createstdlib() {
+    llvm::FunctionType *FT;
+
+    FT = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i32}, false);
+    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "writeInteger", TheModule.get());
+    
+    FT = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i8}, false);
+    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "writeByte", TheModule.get());
+    
+    FT = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i8}, false);
+    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "writeChar", TheModule.get());
+
+    FT = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i8->getPointerTo()}, false);
+    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "writeString", TheModule.get());
 }

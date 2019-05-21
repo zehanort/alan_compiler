@@ -26,12 +26,8 @@ extern const char* filename;
  ******************************/
 static llvm::LLVMContext TheContext;
 static llvm::IRBuilder<> Builder(TheContext);
-static std::unique_ptr<llvm::Module> TheModule = llvm::make_unique<llvm::Module>("module", TheContext);
+static std::unique_ptr<llvm::Module> TheModule;
 static std::unique_ptr<llvm::legacy::FunctionPassManager> TheFPM;
-
-// Global LLVM variables related to the generated code.
-static llvm::Function *TheWriteInteger;
-static llvm::Function *TheWriteString;
 
 // Useful LLVM types.
 static llvm::Type * i8   = llvm::IntegerType::get(TheContext, 8);
@@ -49,6 +45,8 @@ inline llvm::ConstantInt* c32(int n) {
 }
 
 llvm::Type *type_to_llvm(Type type, PassMode pm);
+
+void codegen(ASTNode *t);
 
 typedef struct {
     unordered_map<string, llvm::Type*> variableTypes;
@@ -117,7 +115,5 @@ public:
         return this->scopeLogs.back().returnAdded;
     };
 };
-
-void wrapup();
 
 #endif
