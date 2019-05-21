@@ -1,6 +1,5 @@
 %{
 #include <stdio.h>
-#include <string>
 #include "symbol.hpp"
 #include "general.hpp"
 #include "ast.hpp"
@@ -46,16 +45,14 @@ COMMENTS_1_LINE "--".*\n
 "<="			{ return T_le; }
 ">="			{ return T_ge; }
 
-{L}({L}|{D}|_)*         { yylval.s = stringCopy(yytext); yylval.s[strlen(yytext)] = '\0'; return T_id; }
+{L}({L}|{D}|_)*         { yylval.s = strdup(yytext); return T_id; }
 
 {D}+                    { yylval.n = atoi(yytext); return T_const; }
 
-\'[^\n\'\"\\]\'         { yylval.c = yytext[0]; return T_char; }
-\'{ESC}\'               { yylval.c = yytext[0]; return T_char; }
+\'[^\n\'\"\\]\'         { yylval.c = yytext[1]; return T_char; }
+\'{ESC}\'               { yylval.c = escapeChar(yytext); return T_char; }
 
-\"(\\.|[^\\"^\n])*\"    { yylval.s = stringCopy(yytext); yylval.s[strlen(yytext)] = '\0'; return T_string; }
-
-\"(\\.|[^\\"^\n])*\"	{ yylval.s = yytext; return T_string; }
+\"(\\.|[^\\"^\n])*\"    { yylval.s = escapeString(yytext); return T_string; }
 
 {OP}					{ return yytext[0]; }
 

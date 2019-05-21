@@ -23,11 +23,13 @@
 #define __GENERAL_HPP__
 
 #include <stdio.h>
+#include <string.h>
 #include "error.hpp"
 
-void * mynew    (size_t size);
-void   mydelete (void * p);
-char *stringCopy(char *s);
+void * mynew        (size_t size);
+void   mydelete     (void * p);
+char   escapeChar   (char *s);
+char * escapeString (char *s);
 
 /* ---------------------------------------------------------------------
    -------------- Καθολικές μεταβλητές του μεταγλωττιστή ---------------

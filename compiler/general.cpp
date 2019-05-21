@@ -44,13 +44,53 @@ void mydelete (void * p) {
       free(p);
 }
 
-char *stringCopy(char *s) {
-  char *result = NULL;
-  if (s) {
-    result = (char *)mynew((strlen(s) + 1) * sizeof(char));
-    strcpy(result, s);
+char escapeChar(char *s) {
+  switch (s[2]) {
+    case 'n':  return '\n';
+    case 't':  return '\t';
+    case 'r':  return '\r';
+    case '0':  return '\0';
+    case '\\': return '\\';
+    case '\'': return '\'';
+    case '\"': return '\"';
+    case 'x': {
+      char hex[2];
+      hex[0] = s[3];
+      hex[1] = s[4];
+      return (char)strtol(hex, NULL, 16);
+    }
   }
-  return result;
+}
+
+char *escapeString(char *s) {
+  int N = strlen(s)+1; // includes trailing '\0'
+  char curr;
+  char to_escape[5] = {'\'', '\\', '\0', '\0', '\0'};
+  char *escaped = (char *)malloc(N*sizeof(char));
+  int i = 1;
+  int j = 0;
+  while (i < N-1) {
+    char curr = s[i];
+    printf("curr is %c\n", curr);
+    /* curr is not the beginning of an escape sequence */
+    if (curr != '\\') {
+      escaped[j++] = curr;
+    }
+    /* curr is the beginning of an escape sequence */    
+    else {
+      curr = s[++i]; // skip '\'
+      if (curr == 'x') {
+        to_escape[2] = 'x';
+        to_escape[3] = s[++i];
+        to_escape[4] = s[i];
+      }
+      else to_escape[2] = s[i];
+      escaped[j++] = escapeChar(to_escape);
+    }
+    i++;
+  }
+  escaped[j-1] = '\0';
+  return escaped;
 }
 
 /* ---------------------------------------------------------------------
