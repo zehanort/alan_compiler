@@ -1,0 +1,7 @@
+solve () : proc
+a : int;
+b : int;
+{
+	a = 1;
+	b = 2;
+}

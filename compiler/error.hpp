@@ -31,4 +31,6 @@ void fatal    (const char * fmt, ...);
 void error    (const char * fmt, ...);
 void warning  (const char * fmt, ...);
 
+extern const char *filename;
+
 #endif

@@ -1,0 +1,11 @@
+solve () : int
+	foo(x : int, y : reference int []) : proc
+	i : int;
+	{
+		i = 123;
+		y[0] = i+x;
+	}
+	pin : int [10];
+{
+	foo(42, pin);
+}

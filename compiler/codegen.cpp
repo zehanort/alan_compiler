@@ -1,6 +1,6 @@
 #include "codegen.hpp"
 
-llvm::Type * type_to_llvm(Type type, PassMode pm) {
+llvm::Type * type_to_llvm(Type type, PassMode pm = PASS_BY_VALUE) {
   llvm::Type *llvmtype;
   switch (type->kind) {
     case TYPE_VOID:
@@ -32,7 +32,7 @@ Logger logger;
 
 llvm::Value * ASTId::codegen() {
   /* id is an array */
-  if (this->type = TYPE_ARRAY) {
+  if (this->type->refType != nullptr) {
     auto *index = this->left->left->codegen();
     /* var is array by reference */
     if (logger.isPointer(this->id)) {
@@ -84,8 +84,8 @@ llvm::Value * ASTVdef::codegen() {
 llvm::Value * ASTFdef::codegen() {
   logger.openScope();
 
-  ASTSeq *params = this->left->left;
-  ASTSeq *locdefs = this->left->right;
+  auto *params = this->left->left;
+  auto *locdefs = this->left->right;
   string funcName = this->left->id;
   llvm::Type *retType = type_to_llvm(this->left->type);
   vector<string> parameterNames;
@@ -124,6 +124,7 @@ llvm::Value * ASTFdef::codegen() {
     locdefs->left->codegen();
     locdefs = locdefs->right;
   }
+
   this->right->codegen();
 
   /* step 6: check if return was omitted */
@@ -141,15 +142,15 @@ llvm::Value * ASTFdef::codegen() {
   return nullptr;
 }
 
-// llvm::Value * ASTFdecl::codegen() {}
+llvm::Value * ASTFdecl::codegen() { return nullptr; }
 
-// llvm::Value * ASTPar::codegen() {}
+llvm::Value * ASTPar::codegen() { return nullptr; }
 
 llvm::Value * ASTAssign::codegen() {
   auto *expr = this->right->codegen();
   llvm::Value *varAddr;
   /* var is array */
-  if (this->left->type = TYPE_ARRAY) {
+  if (this->left->type->refType != nullptr) {
     auto *index = this->left->left->codegen();
     /* var is array by reference */
     if (logger.isPointer(this->left->id))
@@ -171,22 +172,23 @@ llvm::Value * ASTAssign::codegen() {
 }
 
 llvm::Value * ASTFcall::codegen() {
-	auto *F = theModule->getFunction(this->id);
+	auto *F = TheModule->getFunction(this->id);
 	vector<llvm::Value*> argv;
 	auto *ASTargs = this->left;
 
-	for (auto &Arg : TheFunction->args()) {
+	for (auto &Arg : F->args()) {
     llvm::Value *arg;
     auto *ASTarg = ASTargs->left;
     /* If expected argument is by reference */
     if (Arg.getType()->isPointerTy()) {
       /* string literal */
-      if (typeid(ASTarg) == typeid(new ASTString("")))
+      // if (typeid(ASTarg) == typeid(new ASTString("")))
+      if (ASTarg->op == STRING)
         arg = ASTarg->codegen();
       /* variable */
       else {
-        if (ASTarg->type == TYPE_ARRAY) {
-          auto index = ASTarg->index->codegen();
+        if (ASTarg->type->refType != nullptr) {
+          auto index = ASTarg->left->codegen();
           if (logger.isPointer(ASTarg->id))
             arg = Builder.CreateGEP(Builder.CreateLoad(logger.getVarAlloca(ASTarg->id)), index);
           else
@@ -220,9 +222,9 @@ llvm::Value * ASTFcall_stmt::codegen() {
 
 llvm::Value * ASTIf::codegen() {
   llvm::Value *CondV = this->left->codegen();
-  Function *TheFunction = Builder.GetInsertBlock()->getParent();
-  BasicBlock *ThenBB  = BasicBlock::Create(TheContext, "then", TheFunction);
-  BasicBlock *MergeBB = BasicBlock::Create(TheContext, "endif", TheFunction);
+  llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
+  llvm::BasicBlock *ThenBB  = llvm::BasicBlock::Create(TheContext, "then", TheFunction);
+  llvm::BasicBlock *MergeBB = llvm::BasicBlock::Create(TheContext, "endif", TheFunction);
   Builder.CreateCondBr(CondV, ThenBB, MergeBB);
 
   // Emit then block
@@ -237,10 +239,10 @@ llvm::Value * ASTIf::codegen() {
 
 llvm::Value * ASTIfelse::codegen() {
   llvm::Value *CondV = this->left->left->codegen();
-  Function *TheFunction = Builder.GetInsertBlock()->getParent();
-  BasicBlock *ThenBB  = BasicBlock::Create(TheContext, "then", TheFunction);
-  BasicBlock *ElseBB  = BasicBlock::Create(TheContext, "else", TheFunction);
-  BasicBlock *MergeBB = BasicBlock::Create(TheContext, "endif", TheFunction);
+  llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
+  llvm::BasicBlock *ThenBB  = llvm::BasicBlock::Create(TheContext, "then", TheFunction);
+  llvm::BasicBlock *ElseBB  = llvm::BasicBlock::Create(TheContext, "else", TheFunction);
+  llvm::BasicBlock *MergeBB = llvm::BasicBlock::Create(TheContext, "endif", TheFunction);
   Builder.CreateCondBr(CondV, ThenBB, ElseBB);
 
   // Emit then block
@@ -259,10 +261,10 @@ llvm::Value * ASTIfelse::codegen() {
 }
 
 llvm::Value * ASTWhile::codegen() {
-  Function *TheFunction = Builder.GetInsertBlock()->getParent();
-  BasicBlock *CondBB = BasicBlock::Create(TheContext, "cond", TheFunction);
-  BasicBlock *LoopBB = BasicBlock::Create(TheContext, "loop", TheFunction);
-  BasicBlock *AfterBB = BasicBlock::Create(TheContext, "after", TheFunction);
+  llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
+  llvm::BasicBlock *CondBB = llvm::BasicBlock::Create(TheContext, "cond", TheFunction);
+  llvm::BasicBlock *LoopBB = llvm::BasicBlock::Create(TheContext, "loop", TheFunction);
+  llvm::BasicBlock *AfterBB = llvm::BasicBlock::Create(TheContext, "after", TheFunction);
   
   // Emit Condition block
   Builder.SetInsertPoint(CondBB);
@@ -284,13 +286,15 @@ llvm::Value * ASTRet::codegen() {
 
 llvm::Value * ASTSeq::codegen() {
   this->left->codegen();
-  this->right->codegen();
+  if (this->right)
+    this->right->codegen();
   return nullptr;
 }
 
 llvm::Value * ASTOp::codegen() {
   llvm::Value *l = this->left->codegen();
-  llvm::Value *r = this->right->codegen();
+  llvm::Value *r = nullptr;
+  if (this->op != NOT) r = this->right->codegen();
   switch (this->op) {
     case PLUS:  return Builder.CreateAdd(l, r, "addtmp");
     case MINUS: return Builder.CreateSub(l, r, "subtmp");
@@ -305,7 +309,7 @@ llvm::Value * ASTOp::codegen() {
     case GE:    return Builder.CreateICmpSGE(l, r, "getmp");
     case AND:   return Builder.CreateAnd(l, r, "andtmp");
     case OR:    return Builder.CreateOr(l, r, "ortmp");
-    case NOT:   return Builder.CreateNot(l, r, "nottmp");
+    case NOT:   return Builder.CreateNot(l, "nottmp");
   }
   return nullptr;
 }

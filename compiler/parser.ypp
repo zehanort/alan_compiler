@@ -2,10 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "ast.hpp"
-#include "symbol.hpp"
-#include "general.hpp"
-#include "error.hpp"
+#include "codegen.hpp"
 
 using namespace std;
 
@@ -14,7 +11,7 @@ void yyerror (const char *msg);
 extern int yylex();
 extern char *yytext;
 extern int linecount;
-extern const char *filename;
+const char *filename;
 ASTNode *t;
 %}
 
@@ -196,8 +193,8 @@ void yyerror (const char *msg) {
 	fatal("%s in \"%s\"\n", msg, yytext);
 }
 
-int main() {
-	filename = "sourcecode";
+int main(int argc, char *argv[]) {
+	filename = argv[1];
 	linecount = 1;
 	if (yyparse()) return 1;
 	printf("Syntax analysis of input program was successful.\n");
@@ -208,6 +205,7 @@ int main() {
 	closeScope();
 	destroySymbolTable();
 	printf("Semantic analysis of input program was completed.\n");
-	return sem_failed;
+	if (sem_failed) return sem_failed;
+	t->codegen();
+	return 0;
 }
-

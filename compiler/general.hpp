@@ -34,7 +34,6 @@ char *stringCopy(char *s);
    --------------------------------------------------------------------- */
 
 extern int linecount;
-extern const char * filename;
 extern int sem_failed;
 
 #endif
