@@ -3,7 +3,7 @@
 CXX=g++
 CC=gcc
 CXXFLAGS=-std=c++11 `llvm-config --cxxflags`
-CFLAGS=-Wall -Werror
+CFLAGS=-Wall
 LDFLAGS=`llvm-config --ldflags --system-libs --libs all` /usr/lib/x86_64-linux-gnu/libfl.a
 
 default: alan libalanstd.a

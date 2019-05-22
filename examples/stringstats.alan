@@ -1,0 +1,8 @@
+stringstats() : proc
+str : byte[10];
+{
+	writeString("Give a string up to 8 letters to compute length: ");
+	readString(8, str);
+	writeInteger(strlen(str));
+	writeInteger(strcmp(str, "hello!"));
+}

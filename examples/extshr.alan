@@ -1,0 +1,6 @@
+extshr() : proc
+{
+	writeString("Please give a number: ");
+	writeInteger(extend(shrink(extend(shrink(extend(shrink(extend(readByte()))))))));
+	writeString("\n");
+}
