@@ -352,15 +352,49 @@ llvm::Value * ASTOp::codegen() {
 void createstdlib() {
     llvm::FunctionType *FT;
 
-    FT = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i32}, false);
+    /*** write functions ***/
+    FT = llvm::FunctionType::get(proc, vector<llvm::Type *>{i32}, false);
     llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "writeInteger", TheModule.get());
     
-    FT = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i8}, false);
+    FT = llvm::FunctionType::get(proc, vector<llvm::Type *>{i8}, false);
     llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "writeByte", TheModule.get());
     
-    FT = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i8}, false);
+    FT = llvm::FunctionType::get(proc, vector<llvm::Type *>{i8}, false);
     llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "writeChar", TheModule.get());
 
-    FT = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i8->getPointerTo()}, false);
+    FT = llvm::FunctionType::get(proc, vector<llvm::Type *>{i8->getPointerTo()}, false);
     llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "writeString", TheModule.get());
+
+    /*** read functions ***/
+    FT = llvm::FunctionType::get(i32, vector<llvm::Type *>{}, false);
+    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "readInteger", TheModule.get());
+    
+    FT = llvm::FunctionType::get(i8, vector<llvm::Type *>{}, false);
+    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "readByte", TheModule.get());
+    
+    FT = llvm::FunctionType::get(i8, vector<llvm::Type *>{}, false);
+    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "readChar", TheModule.get());
+
+    FT = llvm::FunctionType::get(proc, vector<llvm::Type *>{i32, i8->getPointerTo()}, false);
+    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "readString", TheModule.get());
+
+    /*** type casting functions ***/
+    FT = llvm::FunctionType::get(i32, vector<llvm::Type *>{i8}, false);
+    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "extend", TheModule.get());
+
+    FT = llvm::FunctionType::get(i8, vector<llvm::Type *>{i32}, false);
+    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "shrink", TheModule.get());
+
+    /*** string manipulation functions ***/
+    FT = llvm::FunctionType::get(i32, vector<llvm::Type *>{i8->getPointerTo()}, false);
+    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "strlen", TheModule.get());
+
+    FT = llvm::FunctionType::get(i32, vector<llvm::Type *>{i8->getPointerTo(), i8->getPointerTo()}, false);
+    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "strcmp", TheModule.get());
+
+    FT = llvm::FunctionType::get(proc, vector<llvm::Type *>{i8->getPointerTo(), i8->getPointerTo()}, false);
+    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "strcpy", TheModule.get());
+
+    FT = llvm::FunctionType::get(proc, vector<llvm::Type *>{i8->getPointerTo(), i8->getPointerTo()}, false);
+    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "strcat", TheModule.get());
 }
