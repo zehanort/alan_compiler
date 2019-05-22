@@ -1,0 +1,5 @@
+inc(): proc {
+	writeString("Give a number and I will increment it by 1: ");
+	writeInteger(readInteger()+1);
+	writeChar('\n');
+}
