@@ -350,5 +350,7 @@ void ASTOp::sem() {
       error("only boolean conditions supported by ! operator");
     type = typeBoolean;
     return;
+
+    default: internal("undefined operator");
   }
 }

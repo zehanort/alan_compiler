@@ -3,6 +3,6 @@ PROGNAME=$(basename $1 .alan)
 ./alan $PROGNAME <$1 > $PROGNAME.ll
 llvm-as $PROGNAME.ll
 llc -filetype=obj $PROGNAME.bc
-g++ $PROGNAME.o libalanstd.a
+g++ -no-pie $PROGNAME.o libalanstd.a
 chmod +x a.out
 rm $PROGNAME.{o,bc,ll} $LLFILENAME $OBJFILENAME

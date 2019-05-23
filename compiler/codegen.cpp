@@ -18,6 +18,8 @@ llvm::Type * type_to_llvm(Type type, PassMode pm = PASS_BY_VALUE) {
       break;
     case TYPE_IARRAY:
       llvmtype = type_to_llvm(type->refType);
+      break;
+    default: internal("cannot cast semantic type to LLVM type");
   }
   if (pm == PASS_BY_REFERENCE) return llvmtype->getPointerTo();
   return llvmtype;
@@ -46,6 +48,7 @@ void codegen(ASTNode *t) {
     llvm::FunctionType::get(i32, vector<llvm::Type*>{}, false);
   llvm::Function *MainF =
     llvm::Function::Create(MainType, llvm::Function::ExternalLinkage, "main", TheModule.get());
+  logger.addFunctionInScope(MainF);
   llvm::BasicBlock *MainBB =
     llvm::BasicBlock::Create(TheContext, "entry", MainF);
 
@@ -53,7 +56,7 @@ void codegen(ASTNode *t) {
   t->codegen();
 
   /* step 5: create a call to the main function */
-  llvm::Function *F = TheModule->getFunction(t->left->id);
+  llvm::Function *F = logger.getFunctionInScope(t->left->id);
   Builder.SetInsertPoint(MainBB);
   Builder.CreateCall(F, vector<llvm::Value*>{});
   Builder.CreateRet(c32(0));
@@ -89,7 +92,8 @@ llvm::Value * ASTId::codegen() {
       return Builder.CreateLoad(addr);
     }
     /* variable is not by reference */
-    else Builder.CreateLoad(logger.getVarAlloca(this->id));
+    else
+    	return Builder.CreateLoad(logger.getVarAlloca(this->id));
   }
   /* should be unreachable */
   return nullptr;
@@ -116,11 +120,9 @@ llvm::Value * ASTVdef::codegen() {
 }
 
 llvm::Value * ASTFdef::codegen() {
-  logger.openScope();
-
   auto *params = this->left->left;
   auto *locdefs = this->left->right;
-  string funcName = this->left->id;
+  string Fname = this->left->id;
   llvm::Type *retType = type_to_llvm(this->left->type);
   vector<string> parameterNames;
   vector<llvm::Type *> parameterTypes;
@@ -136,41 +138,42 @@ llvm::Value * ASTFdef::codegen() {
     llvm::FunctionType::get(retType, parameterTypes, false);
 
   llvm::Function *F =
-    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, funcName, TheModule.get());
+    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, Fname, TheModule.get());
+
+  logger.addFunctionInScope(F);
+  logger.openScope();
 
   /* step 2: set all param names */
   unsigned Idx = 0;
   for (auto &arg : F->args()) arg.setName(parameterNames[Idx++]);
 
-  /* step 3: create function instertion block */
-  llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", F);
-  Builder.SetInsertPoint(BB);
-
-  /* step 4: create allocas for params */
+  /* step 3: create allocas for params */
   for (auto &arg : F->args()) {
   	auto *alloca = Builder.CreateAlloca(arg.getType(), nullptr, arg.getName());
     Builder.CreateStore(&arg, alloca);
     logger.addVariable(arg.getName(), arg.getType(), alloca);
   }
 
-  /* step 5: codegen local defs and body */
+  /* step 4: codegen local defs */
   while (locdefs != nullptr) {
     locdefs->left->codegen();
     locdefs = locdefs->right;
   }
 
+  /* step 5: create function instertion block */
+  llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", F);
+  Builder.SetInsertPoint(BB);
+
+  /* step 6: codegen body */
   this->right->codegen();
 
-  /* step 6: check if return was omitted */
-  /* --- case 1: function is proc, and return was omitted */
-  if (F->getReturnType()->isVoidTy()) Builder.CreateRetVoid();
-  /* --- case 2: return omitted, make it return 0 of the appropriate type */
-  else if (!logger.returnAddedInScopeFunction()) {
+  /* step 7: check if return was omitted */
+  if (!logger.returnAddedInScopeFunction()) {
     if (F->getReturnType()->isIntegerTy(32)) Builder.CreateRet(c32(0));
     else Builder.CreateRet(c8(0));
   }
 
-  /* step 7: verify, done */
+  /* step 8: verify, done */
   llvm::verifyFunction(*F);
   logger.closeScope();
   return nullptr;
@@ -206,7 +209,7 @@ llvm::Value * ASTAssign::codegen() {
 }
 
 llvm::Value * ASTFcall::codegen() {
-	auto *F = TheModule->getFunction(this->id);
+	llvm::Function *F = logger.getFunctionInScope(this->id);
 	vector<llvm::Value*> argv;
 	auto *ASTargs = this->left;
 
@@ -344,6 +347,7 @@ llvm::Value * ASTOp::codegen() {
     case AND:   return Builder.CreateAnd(l, r, "andtmp");
     case OR:    return Builder.CreateOr(l, r, "ortmp");
     case NOT:   return Builder.CreateNot(l, "nottmp");
+    default:		internal("unknown operation to codegen");
   }
   return nullptr;
 }
@@ -351,50 +355,53 @@ llvm::Value * ASTOp::codegen() {
 /* function that codegens ALAN stdlib functions */
 void createstdlib() {
     llvm::FunctionType *FT;
+    vector<llvm::Function*> libFunctions;
 
     /*** write functions ***/
     FT = llvm::FunctionType::get(proc, vector<llvm::Type *>{i32}, false);
-    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "writeInteger", TheModule.get());
-    
+    libFunctions.push_back(llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "writeInteger", TheModule.get()));
+
     FT = llvm::FunctionType::get(proc, vector<llvm::Type *>{i8}, false);
-    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "writeByte", TheModule.get());
-    
+    libFunctions.push_back(llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "writeByte", TheModule.get()));
+
     FT = llvm::FunctionType::get(proc, vector<llvm::Type *>{i8}, false);
-    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "writeChar", TheModule.get());
+    libFunctions.push_back(llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "writeChar", TheModule.get()));
 
     FT = llvm::FunctionType::get(proc, vector<llvm::Type *>{i8->getPointerTo()}, false);
-    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "writeString", TheModule.get());
+    libFunctions.push_back(llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "writeString", TheModule.get()));
 
     /*** read functions ***/
     FT = llvm::FunctionType::get(i32, vector<llvm::Type *>{}, false);
-    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "readInteger", TheModule.get());
+    libFunctions.push_back(llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "readInteger", TheModule.get()));
     
     FT = llvm::FunctionType::get(i8, vector<llvm::Type *>{}, false);
-    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "readByte", TheModule.get());
+    libFunctions.push_back(llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "readByte", TheModule.get()));
     
     FT = llvm::FunctionType::get(i8, vector<llvm::Type *>{}, false);
-    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "readChar", TheModule.get());
+    libFunctions.push_back(llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "readChar", TheModule.get()));
 
     FT = llvm::FunctionType::get(proc, vector<llvm::Type *>{i32, i8->getPointerTo()}, false);
-    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "readString", TheModule.get());
+ 		libFunctions.push_back(llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "readString", TheModule.get()));
 
     /*** type casting functions ***/
     FT = llvm::FunctionType::get(i32, vector<llvm::Type *>{i8}, false);
-    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "extend", TheModule.get());
+    libFunctions.push_back(llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "extend", TheModule.get()));
 
     FT = llvm::FunctionType::get(i8, vector<llvm::Type *>{i32}, false);
-    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "shrink", TheModule.get());
+    libFunctions.push_back(llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "shrink", TheModule.get()));
 
     /*** string manipulation functions ***/
     FT = llvm::FunctionType::get(i32, vector<llvm::Type *>{i8->getPointerTo()}, false);
-    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "strlen", TheModule.get());
+    libFunctions.push_back(llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "strlen", TheModule.get()));
 
     FT = llvm::FunctionType::get(i32, vector<llvm::Type *>{i8->getPointerTo(), i8->getPointerTo()}, false);
-    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "strcmp", TheModule.get());
+    libFunctions.push_back(llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "strcmp", TheModule.get()));
 
     FT = llvm::FunctionType::get(proc, vector<llvm::Type *>{i8->getPointerTo(), i8->getPointerTo()}, false);
-    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "strcpy", TheModule.get());
+    libFunctions.push_back(llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "strcpy", TheModule.get()));
 
     FT = llvm::FunctionType::get(proc, vector<llvm::Type *>{i8->getPointerTo(), i8->getPointerTo()}, false);
-    llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "strcat", TheModule.get());
+    libFunctions.push_back(llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "strcat", TheModule.get()));
+
+    for (auto F: libFunctions) logger.addFunctionInScope(F);
 }

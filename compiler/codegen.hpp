@@ -51,6 +51,7 @@ void codegen(ASTNode *t);
 typedef struct {
     unordered_map<string, llvm::Type*> variableTypes;
     unordered_map<string, llvm::AllocaInst*> variableAllocas;
+    unordered_map<string, llvm::Function*> functions;
     bool returnAdded;
 } scopeLog;
 
@@ -113,6 +114,20 @@ public:
 
     bool returnAddedInScopeFunction() {
         return this->scopeLogs.back().returnAdded;
+    };
+
+    void addFunctionInScope(llvm::Function *F) {
+    		this->scopeLogs.back().functions[F->getName().str()] = F;
+    };
+
+    llvm::Function * getFunctionInScope(string id) {
+        for (auto it = this->scopeLogs.rbegin(); it != this->scopeLogs.rend(); ++it) {
+            if (!(it->functions.find(id) == it->functions.end()))
+                return it->functions[id];
+        }
+        /* if sem was ok, this point should be unreachable */
+        internal("Function \"%s\" not in scope.", id);
+        return nullptr;
     };
 };
 

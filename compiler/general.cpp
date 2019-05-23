@@ -59,7 +59,10 @@ char escapeChar(char *s) {
       hex[1] = s[4];
       return (char)strtol(hex, NULL, 16);
     }
+    default: internal("read garbage from lexer");
   }
+  // unreachable
+  return -1;
 }
 
 char *escapeString(char *s) {
@@ -70,8 +73,7 @@ char *escapeString(char *s) {
   int i = 1;
   int j = 0;
   while (i < N-1) {
-    char curr = s[i];
-    printf("curr is %c\n", curr);
+    curr = s[i];
     /* curr is not the beginning of an escape sequence */
     if (curr != '\\') {
       escaped[j++] = curr;

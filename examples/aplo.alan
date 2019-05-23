@@ -2,6 +2,14 @@ solve () : proc
 a : int;
 b : int;
 {
-	a = 1;
-	b = 2;
+	a = 42;
+	b = a+2;
+	writeString("a is ");
+	writeInteger(a);
+	writeString("b is ");
+	writeInteger(b);
+	writeString("a+b is ");
+	writeInteger(a+b);
+	writeChar('\n');
+	return;
 }

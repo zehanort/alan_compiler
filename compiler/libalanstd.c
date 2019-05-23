@@ -102,7 +102,7 @@ void strcpy(uint8_t *trg, uint8_t *src) {
 
 void strcat(uint8_t *trg, uint8_t *src) {
   while (*trg++ != '\0');
-  *trg--;
+  trg--;
   while (*src != '\0') *trg++ = *src++;
   *trg = '\0';
   return;

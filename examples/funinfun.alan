@@ -1,0 +1,11 @@
+fun1(): proc
+	fun2() : proc
+	{
+		writeString("in fun2!\n");
+		return;
+	}
+{
+	writeString("In fun1!\n");
+	fun2();
+	return;
+}
