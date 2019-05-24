@@ -3,7 +3,7 @@
 CXX=g++
 CC=gcc
 CXXFLAGS=-std=c++11 `llvm-config --cxxflags`
-CFLAGS=-Wall
+CFLAGS=-w
 LDFLAGS=`llvm-config --ldflags --system-libs --libs all` /usr/lib/x86_64-linux-gnu/libfl.a
 
 default: alan libalanstd.a
@@ -12,7 +12,7 @@ lexer.cpp: lexer.l
 	flex -s -o lexer.cpp lexer.l
 
 lexer.o: lexer.cpp parser.hpp ast.hpp
-	$(CXX) $(CXXFLAGS) -c $<
+	$(CXX) $(CXXFLAGS) -w -c $<
 
 parser.hpp parser.cpp: parser.ypp
 	bison -dv -o parser.cpp parser.ypp
@@ -27,7 +27,7 @@ error.o      : error.cpp error.hpp general.hpp
 	$(CXX) $(CXXFLAGS) -c $<
 
 symbol.o     : symbol.cpp symbol.hpp general.hpp error.hpp
-	$(CXX) $(CXXFLAGS) -c $<
+	$(CXX) $(CXXFLAGS) -Wno-cast-qual -c $<
 
 ast.o        : ast.cpp ast.hpp
 	$(CXX) $(CXXFLAGS) -c $<

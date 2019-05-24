@@ -220,7 +220,7 @@ static SymbolEntry * newEntry (const char * name)
     /* Αρχικοποίηση όλων εκτός: entryType και u */
 
     e = (SymbolEntry *) mynew(sizeof(SymbolEntry));
-    e->id = (const char *) mynew(strlen(name) + 1);
+    e->id = (char *) mynew(strlen(name) + 1);
 
     strcpy((char *) (e->id), name);
     e->hashValue    = PJW_hash(name) % hashTableSize;
@@ -279,7 +279,7 @@ SymbolEntry * newConstant (const char * name, Type type, ...)
                 break;
             }
         default:
-            internal("Invalid type for constant");
+            internal("Invalid type for constant\n");
     }
     va_end(ap);
 
@@ -308,6 +308,8 @@ SymbolEntry * newConstant (const char * name, Type type, ...)
                 strcpy(buffer, "\"");
                 strAppendString(buffer, value.vString);
                 strcat(buffer, "\"");
+            default:
+                internal("Invalid type of constant\n");
         }
         e = newEntry(buffer);
     }
@@ -333,6 +335,8 @@ SymbolEntry * newConstant (const char * name, Type type, ...)
                 break;
             case TYPE_ARRAY:
                 e->u.eConstant.value.vString = value.vString;
+            default:
+                internal("Invalid type of constant\n");
         }
     }
     return e;
@@ -371,7 +375,7 @@ SymbolEntry * newParameter (const char * name, Type type,
     SymbolEntry * e;
 
     if (f->entryType != ENTRY_FUNCTION)
-        internal("Cannot add a parameter to a non-function");
+        internal("Cannot add a parameter to a non-function\n");
     switch (f->u.eFunction.pardef) {
         case PARDEF_DEFINE:
             e = newEntry(name);
@@ -435,17 +439,17 @@ static unsigned int fixOffset (SymbolEntry * args)
 void forwardFunction (SymbolEntry * f)
 {
     if (f->entryType != ENTRY_FUNCTION)
-        internal("Cannot make a non-function forward");
+        internal("Cannot make a non-function forward\n");
     f->u.eFunction.isForward = true;
 }
 
 void endFunctionHeader (SymbolEntry * f, Type type)
 {
     if (f->entryType != ENTRY_FUNCTION)
-        internal("Cannot end parameters in a non-function");
+        internal("Cannot end parameters in a non-function\n");
     switch (f->u.eFunction.pardef) {
         case PARDEF_COMPLETE:
-            internal("Cannot end parameters in an already defined function");
+            internal("Cannot end parameters in an already defined function\n");
             break;
         case PARDEF_DEFINE:
             fixOffset(f->u.eFunction.firstArgument);
@@ -599,6 +603,7 @@ void destroyType (Type type)
                 destroyType(type->refType);
                 mydelete(type);
             }
+        default: internal("Unknown type\n");
     }
 }
 
@@ -606,7 +611,7 @@ unsigned int sizeOfType (Type type)
 {
     switch (type->kind) {
         case TYPE_VOID:
-            internal("Type void has no size");
+            internal("Type void has no size\n");
             break;
         case TYPE_INTEGER:
         case TYPE_IARRAY:
@@ -619,6 +624,7 @@ unsigned int sizeOfType (Type type)
             return 10;
         case TYPE_ARRAY:
             return type->size * sizeOfType(type->refType);
+        default: internal("Unknown type\n");
     }
     return 0;
 }
@@ -634,6 +640,7 @@ bool equalType (Type type1, Type type2)
         case TYPE_IARRAY:
         case TYPE_POINTER:
             return equalType(type1->refType, type2->refType);
+        default: internal("Unable to compare types\n");
     }
     return true;        
 }
