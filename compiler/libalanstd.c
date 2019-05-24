@@ -27,7 +27,7 @@ void writeString(uint8_t *s) {
 /*** read functions ***/
 int32_t readInteger() {
     int32_t n;
-    if (!scanf("%" SCNd32, &n)) {
+    if (!scanf(" %" SCNd32, &n)) {
         fprintf(stderr, "readInteger: failed to read integer\n");
         exit(1);
     }
@@ -36,7 +36,7 @@ int32_t readInteger() {
 
 uint8_t readByte() {
     uint8_t b;
-    if (!scanf("%" SCNu8, &b)) {
+    if (!scanf(" %" SCNu8, &b)) {
         fprintf(stderr, "readByte: failed to read byte\n");
         exit(1);
     }
@@ -53,6 +53,7 @@ uint8_t readChar() {
 }
 
 void readString(int32_t n, uint8_t *s) {
+    scanf(" ");
     int i;
     uint8_t c;
     for (i = 0; i < n; i++) {
