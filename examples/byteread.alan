@@ -1,0 +1,6 @@
+byteread(): proc {
+	writeString("Give an integer from 0 to 255: ");
+	writeByte(readByte());
+	writeChar('\n');
+	return;
+}

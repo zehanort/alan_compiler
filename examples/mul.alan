@@ -1,0 +1,6 @@
+mul2reads(): proc {
+	writeString("Give 2 numbers to multiply: ");
+	writeInteger(readInteger()*readInteger());
+	writeChar('\n');
+	return;
+}
