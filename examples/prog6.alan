@@ -7,7 +7,13 @@ program () : proc
 		{
 			i =0;
 			while(i<l){
+				writeChar('>');
+				writeChar(array[i]);
+				writeChar('>');
+				writeChar(array[l-i-1]);
+				writeChar('\n');
 				if(array[i] != array[l-i-1]){
+					writeString("Found diff!");
 					return 0;
 				}
 				i = i+1;
