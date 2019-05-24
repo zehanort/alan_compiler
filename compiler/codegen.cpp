@@ -68,35 +68,39 @@ void codegen(ASTNode *t) {
 }
 
 llvm::Value * ASTId::codegen() {
+  llvm::Value *addr;
   /* id is an array */
   if (this->type->refType != nullptr) {
-    auto *index = this->left->left->codegen();
     /* var is array by reference */
     if (logger.isPointer(this->id)) {
       auto *arr = Builder.CreateLoad(logger.getVarAlloca(this->id));
-      auto *addr = Builder.CreateGEP(arr, index);
-      return Builder.CreateLoad(addr);
+      addr = Builder.CreateGEP(arr, vector<llvm::Value*>{c32(0), c32(0)});
     }
-    /* var is a simple array */
+    /* var is an array by value */
     else {
-      auto *addr = Builder.CreateGEP(logger.getVarAlloca(this->id), index);
-      // auto *addr = Builder.CreateGEP(logger.getVarAlloca(this->id), vector<llvm::Value *>{c32(0), index});!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      return Builder.CreateLoad(addr);
+      auto *arr = logger.getVarAlloca(this->id);
+      addr = Builder.CreateGEP(arr, vector<llvm::Value *>{c32(0), c32(0)});
     }
   }
   /* id is a simple variable */
   else {
     /* variable is by reference */
-    if (logger.isPointer(this->id)) {
-      auto *addr = Builder.CreateLoad(logger.getVarAlloca(this->id));
-      return Builder.CreateLoad(addr);
+    if (logger.isPointer(this->id))
+      addr = Builder.CreateLoad(logger.getVarAlloca(this->id));
+    /* variable is by value */
+    else {
+      /* variable is element of array (a[2]) */
+      if (logger.getVarType(this->id)->isArrayTy()) {
+        auto *index = this->left->codegen();
+        auto *arr = logger.getVarAlloca(this->id);
+        addr = Builder.CreateGEP(arr, vector<llvm::Value *>{c32(0), index});
+      }
+      /* variable is as simple as it gets */
+      else
+        addr = logger.getVarAlloca(this->id);
     }
-    /* variable is not by reference */
-    else
-    	return Builder.CreateLoad(logger.getVarAlloca(this->id));
   }
-  /* should be unreachable */
-  return nullptr;
+  return Builder.CreateLoad(addr);
 }
 
 llvm::Value * ASTInt::codegen() {
@@ -186,28 +190,41 @@ llvm::Value * ASTFdecl::codegen() { return nullptr; }
 llvm::Value * ASTPar::codegen() { return nullptr; }
 
 llvm::Value * ASTAssign::codegen() {
-  auto *expr = this->right->codegen();
-  llvm::Value *varAddr;
-  /* var is array */
+  // auto *lval = this->left->codegen();
+  llvm::Value *addr;
+  /* id is an array */
   if (this->left->type->refType != nullptr) {
-    auto *index = this->left->left->codegen();
     /* var is array by reference */
-    if (logger.isPointer(this->left->id))
-    	varAddr = Builder.CreateGEP(Builder.CreateLoad(logger.getVarAlloca(this->left->id)), index);
-    /* var is a simple array */
-    else
-    	// varAddr = Builder.CreateGEP(logger.getVarAlloca(this->left->id), vector<llvm::Value *>{c32(0), index});!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    	varAddr = Builder.CreateGEP(logger.getVarAlloca(this->left->id), index);
+    if (logger.isPointer(this->left->id)) {
+      auto *arr = Builder.CreateLoad(logger.getVarAlloca(this->left->id));
+      addr = Builder.CreateGEP(arr, vector<llvm::Value*>{c32(0), c32(0)});
+    }
+    /* var is an array by value */
+    else {
+      auto *arr = logger.getVarAlloca(this->left->id);
+      addr = Builder.CreateGEP(arr, vector<llvm::Value *>{c32(0), c32(0)});
+    }
   }
-  /* var is a simple variable */
+  /* id is a simple variable */
   else {
+    /* variable is by reference */
     if (logger.isPointer(this->left->id))
-      varAddr = Builder.CreateLoad(logger.getVarAlloca(this->left->id));
-    /* var is not a pointer */
-    else
-    	varAddr = logger.getVarAlloca(this->left->id);
+      addr = Builder.CreateLoad(logger.getVarAlloca(this->left->id));
+    /* variable is by value */
+    else {
+      /* variable is element of array (a[2]) */
+      if (logger.getVarType(this->left->id)->isArrayTy()) {
+        auto *index = this->left->left->codegen();
+        auto *arr = logger.getVarAlloca(this->left->id);
+        addr = Builder.CreateGEP(arr, vector<llvm::Value *>{c32(0), index});
+      }
+      /* variable is as simple as it gets */
+      else
+        addr = logger.getVarAlloca(this->left->id);
+    }
   }
-  return Builder.CreateStore(expr, varAddr);
+  auto *expr = this->right->codegen();
+  return Builder.CreateStore(expr, addr);
 }
 
 llvm::Value * ASTFcall::codegen() {

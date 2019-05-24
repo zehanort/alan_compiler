@@ -1,0 +1,8 @@
+s(): proc
+str:byte[10];
+{
+	readString(10, str);
+	writeChar(str[0]);
+	writeChar(str[1]);
+	writeChar(str[2]);
+}
