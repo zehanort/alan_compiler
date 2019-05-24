@@ -71,33 +71,54 @@ llvm::Value * ASTId::codegen() {
   llvm::Value *addr;
   /* id is an array */
   if (this->type->refType != nullptr) {
+    cerr << "**ID** [] " << this->id << " is array" << endl;
     /* var is array by reference */
     if (logger.isPointer(this->id)) {
+      cerr << "**ID** [][] is array by ref" << endl;
       auto *arr = Builder.CreateLoad(logger.getVarAlloca(this->id));
       addr = Builder.CreateGEP(arr, vector<llvm::Value*>{c32(0), c32(0)});
     }
     /* var is an array by value */
     else {
+      cerr << "**ID** [][] is array by val" << endl;
       auto *arr = logger.getVarAlloca(this->id);
       addr = Builder.CreateGEP(arr, vector<llvm::Value *>{c32(0), c32(0)});
     }
   }
   /* id is a simple variable */
   else {
+    cerr << "**ID** [] " << this->id << " is var" << endl;
     /* variable is by reference */
-    if (logger.isPointer(this->id))
-      addr = Builder.CreateLoad(logger.getVarAlloca(this->id));
+    if (logger.isPointer(this->id)) {
+      cerr << "**ID** [][] is var by ref" << endl;
+      if (logger.getVarType(this->id)->getPointerElementType()->isPointerTy()) {
+        cerr << "**ID** [][][] is var by ref, array element" << endl;
+        auto *index = this->left->codegen();
+        auto *arr = Builder.CreateLoad(logger.getVarAlloca(this->id));
+        //addr = Builder.CreateGEP(arr, vector<llvm::Value*>{c32(0), index});
+        addr = Builder.CreateGEP(arr, index);
+      }
+      /* variable is as simple as it gets */
+      else {
+        cerr << "**ID** [][][] is var by ref, normal" << endl;
+        addr = Builder.CreateLoad(logger.getVarAlloca(this->id));
+      }
+    }
     /* variable is by value */
     else {
+      cerr << "**ID** [][] is var by val" << endl;
       /* variable is element of array (a[2]) */
       if (logger.getVarType(this->id)->isArrayTy()) {
+        cerr << "**ID** [][][] is var by val, array element" << endl;
         auto *index = this->left->codegen();
         auto *arr = logger.getVarAlloca(this->id);
         addr = Builder.CreateGEP(arr, vector<llvm::Value *>{c32(0), index});
       }
       /* variable is as simple as it gets */
-      else
+      else {
+        cerr << "**ID** [][][] is var by val, normal" << endl;
         addr = logger.getVarAlloca(this->id);
+      }
     }
   }
   return Builder.CreateLoad(addr);
@@ -135,6 +156,7 @@ llvm::Value * ASTFdef::codegen() {
   while (params != nullptr) {
     parameterNames.push_back(params->left->id);
     parameterTypes.push_back(type_to_llvm(params->left->type, params->left->pm));
+    cerr << "[FDef] function " << Fname << ": param " << params->left->id << ": type " << params->left->type->kind << endl;
     params = params->right;
   }
 
@@ -194,33 +216,53 @@ llvm::Value * ASTAssign::codegen() {
   llvm::Value *addr;
   /* id is an array */
   if (this->left->type->refType != nullptr) {
+    cerr << "**AS** [] " << this->left->id << " is array" << endl;
     /* var is array by reference */
     if (logger.isPointer(this->left->id)) {
+      cerr << "**AS** [][] is array by ref" << endl;
       auto *arr = Builder.CreateLoad(logger.getVarAlloca(this->left->id));
       addr = Builder.CreateGEP(arr, vector<llvm::Value*>{c32(0), c32(0)});
     }
     /* var is an array by value */
     else {
+      cerr << "**AS** [][] is array by val" << endl;
       auto *arr = logger.getVarAlloca(this->left->id);
       addr = Builder.CreateGEP(arr, vector<llvm::Value *>{c32(0), c32(0)});
     }
   }
   /* id is a simple variable */
   else {
+    cerr << "**AS** [] " << this->left->id << " is var" << endl;
     /* variable is by reference */
-    if (logger.isPointer(this->left->id))
-      addr = Builder.CreateLoad(logger.getVarAlloca(this->left->id));
+    if (logger.isPointer(this->left->id)) {
+      cerr << "**AS** [][] is var by ref" << endl;
+      if (logger.getVarType(this->left->id)->getPointerElementType()->isPointerTy()) {
+        cerr << "**AS** [][][] is var by ref, array element" << endl;
+        auto *index = this->left->left->codegen();
+        auto *arr = Builder.CreateLoad(logger.getVarAlloca(this->left->id));
+        addr = Builder.CreateGEP(arr, index);
+      }
+      /* variable is as simple as it gets */
+      else {
+        cerr << "**AS** [][][] is var by ref, normal" << endl;
+        addr = Builder.CreateLoad(logger.getVarAlloca(this->left->id));
+      }
+    }
     /* variable is by value */
     else {
+      cerr << "**AS** [][] is var by val" << endl;
       /* variable is element of array (a[2]) */
       if (logger.getVarType(this->left->id)->isArrayTy()) {
+        cerr << "**AS** [][][] is var by val, array element" << endl;
         auto *index = this->left->left->codegen();
         auto *arr = logger.getVarAlloca(this->left->id);
         addr = Builder.CreateGEP(arr, vector<llvm::Value *>{c32(0), index});
       }
       /* variable is as simple as it gets */
-      else
+      else {
+        cerr << "**AS** [][][] is var by val, normal" << endl;
         addr = logger.getVarAlloca(this->left->id);
+      }
     }
   }
   auto *expr = this->right->codegen();
@@ -249,38 +291,48 @@ llvm::Value * ASTFcall::codegen() {
       	cerr << "[][] got var" << endl;
       	// variable is an array
         if (ASTarg->type->refType != nullptr) {
-          cerr << "[][][] var is array" << endl;
+          cerr << "[][][] got var that is array" << endl;
           // array is passed by reference
           if (logger.isPointer(ASTarg->id)) {
-          	cerr << "[][][][] array by ref" << endl;
+          	cerr << "[][][][] got var that is array by ref" << endl;
             arg = Builder.CreateGEP(Builder.CreateLoad(logger.getVarAlloca(ASTarg->id)), vector<llvm::Value*>{c32(0), c32(0)});
           }
           // array is passed by value
           else {
-          	cerr << "[][][][] array by val" << endl;
+          	cerr << "[][][][] got var that is array by val" << endl;
           	arg = Builder.CreateGEP(logger.getVarAlloca(ASTarg->id), vector<llvm::Value*>{c32(0), c32(0)});
           }
         }
         // variable is not an array
         else {
-        	cerr << "[][][] var is not array" << endl;
+        	cerr << "[][][] got var that is not array" << endl;
           // variable is passed by reference
           if (logger.isPointer(ASTarg->id)) {
-          	cerr << "[][][][] var by ref" << endl;
-            arg = Builder.CreateLoad(logger.getVarAlloca(ASTarg->id));
+            cerr << "[][][][] got var that is not array, by ref" << endl;
+            if (logger.getVarType(ASTarg->id)->getPointerElementType()->isPointerTy()) {
+              cerr << "[][][][][] got var that is not array, by ref, array element" << endl;
+              auto *index = ASTarg->left->codegen();
+              auto *arr = Builder.CreateLoad(logger.getVarAlloca(ASTarg->id));
+              arg = Builder.CreateGEP(arr, index);
+            }
+            /* variable is as simple as it gets */
+            else {
+              cerr << "[][][][][] got var that is not array, by ref, normal" << endl;
+              arg = Builder.CreateLoad(logger.getVarAlloca(ASTarg->id));
+            }
           }
           // variable is passed by value
           else {
-          	cerr << "[][][][] var by val" << endl;
+            cerr << "[][][][] got var that is not array, by val" << endl;
             // is an element of an array
             if (logger.getVarType(ASTarg->id)->isArrayTy()) {
-            	cerr << "[][][][][] element of array" << endl;
+            	cerr << "[][][][][] got var that is not array, by val, array element" << endl;
             	auto index = ASTarg->left->codegen();
               arg = Builder.CreateGEP(logger.getVarAlloca(ASTarg->id), vector<llvm::Value*>{c32(0), index});
             }
             // is a completely normal var
             else {
-            	cerr << "[][][][][] noooormal" << endl;
+            	cerr << "[][][][][] got var that is not array, by val, normal" << endl;
               arg = logger.getVarAlloca(ASTarg->id);
             }
           }
