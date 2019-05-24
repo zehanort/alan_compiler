@@ -53,6 +53,7 @@ typedef struct {
     unordered_map<string, llvm::AllocaInst*> variableAllocas;
     unordered_map<string, llvm::Function*> functions;
     unordered_map<string, bool> returnAdded;
+    bool wildRet = false;
 } scopeLog;
 
 class Logger {
@@ -109,10 +110,15 @@ public:
 
     void addReturn(string function) {
         this->scopeLogs.back().returnAdded[function] = true;
+        this->scopeLogs.back().wildRet = true;
     };
 
     bool returnAddedInScopeFunction(string function) {
         return this->scopeLogs.back().returnAdded[function];
+    };
+
+    bool wildRetExists() {
+    		return this->scopeLogs.back().wildRet;
     };
 
     void addFunctionInScope(string fname, llvm::Function *F) {

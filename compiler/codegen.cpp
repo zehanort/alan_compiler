@@ -147,15 +147,15 @@ llvm::Value * ASTFdef::codegen() {
   unsigned Idx = 0;
   for (auto &arg : F->args()) arg.setName(parameterNames[Idx++]);
 
+  llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", F);
+  Builder.SetInsertPoint(BB);
+
   /* step 3: create allocas for params */
   for (auto &arg : F->args()) {
   	auto *alloca = Builder.CreateAlloca(arg.getType(), nullptr, arg.getName());
     Builder.CreateStore(&arg, alloca);
     logger.addVariable(arg.getName(), arg.getType(), alloca);
   }
-
-  llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", F);
-  Builder.SetInsertPoint(BB);
 
   /* step 4: codegen local defs */
   while (locdefs != nullptr) {
@@ -296,9 +296,11 @@ llvm::Value * ASTIf::codegen() {
 
   // Emit then block
   Builder.SetInsertPoint(ThenBB);
+  logger.openScope();
   this->right->codegen();
-  Builder.CreateBr(MergeBB);
-  
+  if (!logger.wildRetExists()) Builder.CreateBr(MergeBB);
+  logger.closeScope();
+
   // Change Insert Point
   Builder.SetInsertPoint(MergeBB);
   return nullptr;
@@ -314,13 +316,17 @@ llvm::Value * ASTIfelse::codegen() {
 
   // Emit then block
   Builder.SetInsertPoint(ThenBB);
+  logger.openScope();
   this->left->right->codegen();
-  Builder.CreateBr(MergeBB);
+  if (!logger.wildRetExists()) Builder.CreateBr(MergeBB);
+  logger.closeScope();
   
   // Emit else block
   Builder.SetInsertPoint(ElseBB);
+  logger.openScope();
   this->right->codegen();
-  Builder.CreateBr(MergeBB);
+  if (!logger.wildRetExists()) Builder.CreateBr(MergeBB);
+  logger.closeScope();
 
   // Change Insert Point
   Builder.SetInsertPoint(MergeBB);
