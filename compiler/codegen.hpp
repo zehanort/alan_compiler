@@ -52,7 +52,7 @@ typedef struct {
     unordered_map<string, llvm::Type*> variableTypes;
     unordered_map<string, llvm::AllocaInst*> variableAllocas;
     unordered_map<string, llvm::Function*> functions;
-    bool returnAdded;
+    unordered_map<string, bool> returnAdded;
 } scopeLog;
 
 class Logger {
@@ -65,7 +65,6 @@ public:
     
     void openScope() {
         scopeLog sl;
-        sl.returnAdded = false;
         this->scopeLogs.push_back(sl);
     };
     
@@ -108,16 +107,16 @@ public:
         return false;
     };
 
-    void addReturn() {
-        this->scopeLogs.back().returnAdded = true;
+    void addReturn(string function) {
+        this->scopeLogs.back().returnAdded[function] = true;
     };
 
-    bool returnAddedInScopeFunction() {
-        return this->scopeLogs.back().returnAdded;
+    bool returnAddedInScopeFunction(string function) {
+        return this->scopeLogs.back().returnAdded[function];
     };
 
-    void addFunctionInScope(llvm::Function *F) {
-    		this->scopeLogs.back().functions[F->getName().str()] = F;
+    void addFunctionInScope(string fname, llvm::Function *F) {
+    		this->scopeLogs.back().functions[fname] = F;
     };
 
     llvm::Function * getFunctionInScope(string id) {

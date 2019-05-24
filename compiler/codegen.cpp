@@ -48,7 +48,7 @@ void codegen(ASTNode *t) {
     llvm::FunctionType::get(i32, vector<llvm::Type*>{}, false);
   llvm::Function *MainF =
     llvm::Function::Create(MainType, llvm::Function::ExternalLinkage, "main", TheModule.get());
-  logger.addFunctionInScope(MainF);
+  logger.addFunctionInScope("main", MainF);
   llvm::BasicBlock *MainBB =
     llvm::BasicBlock::Create(TheContext, "entry", MainF);
 
@@ -140,7 +140,7 @@ llvm::Value * ASTFdef::codegen() {
   llvm::Function *F =
     llvm::Function::Create(FT, llvm::Function::ExternalLinkage, Fname, TheModule.get());
 
-  logger.addFunctionInScope(F);
+  logger.addFunctionInScope(Fname, F);
   logger.openScope();
 
   /* step 2: set all param names */
@@ -154,26 +154,28 @@ llvm::Value * ASTFdef::codegen() {
     logger.addVariable(arg.getName(), arg.getType(), alloca);
   }
 
+  llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", F);
+  Builder.SetInsertPoint(BB);
+
   /* step 4: codegen local defs */
   while (locdefs != nullptr) {
     locdefs->left->codegen();
     locdefs = locdefs->right;
+	  Builder.SetInsertPoint(BB);
   }
 
-  /* step 5: create function instertion block */
-  llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", F);
-  Builder.SetInsertPoint(BB);
-
-  /* step 6: codegen body */
+  /* step 5: codegen body */
   this->right->codegen();
 
-  /* step 7: check if return was omitted */
-  if (!logger.returnAddedInScopeFunction()) {
-    if (F->getReturnType()->isIntegerTy(32)) Builder.CreateRet(c32(0));
-    else Builder.CreateRet(c8(0));
+  /* step 6: check if return was omitted */
+  if (!logger.returnAddedInScopeFunction(Fname)) {
+  	auto *retType = F->getReturnType();
+    if (retType->isIntegerTy(32)) Builder.CreateRet(c32(0));
+    else if (retType->isIntegerTy(8)) Builder.CreateRet(c8(0));
+    else Builder.CreateRetVoid();
   }
 
-  /* step 8: verify, done */
+  /* step 7: verify, done */
   llvm::verifyFunction(*F);
   logger.closeScope();
   return nullptr;
@@ -218,35 +220,63 @@ llvm::Value * ASTFcall::codegen() {
     auto *ASTarg = ASTargs->left;
     /* If expected argument is by reference */
     if (Arg.getType()->isPointerTy()) {
+    	cerr << "[] expecting by reference" << endl;
       /* string literal */
       // if (typeid(ASTarg) == typeid(new ASTString("")))
-      if (ASTarg->op == STRING)
+      if (ASTarg->op == STRING) {
+      	cerr << "[][] got strlit" << endl;
         arg = ASTarg->codegen();
+      }
       /* variable */
       else {
+      	cerr << "[][] got var" << endl;
+      	// variable is an array
         if (ASTarg->type->refType != nullptr) {
-          auto index = ASTarg->left->codegen();
-          if (logger.isPointer(ASTarg->id))
-            arg = Builder.CreateGEP(Builder.CreateLoad(logger.getVarAlloca(ASTarg->id)), index);
-          else
-            arg = Builder.CreateGEP(logger.getVarAlloca(ASTarg->id), index);
-        }
-        else {
-          if (logger.isPointer(ASTarg->id))
-            arg = Builder.CreateLoad(logger.getVarAlloca(ASTarg->id));
+          cerr << "[][][] var is array" << endl;
+          // array is passed by reference
+          if (logger.isPointer(ASTarg->id)) {
+          	cerr << "[][][][] array by ref" << endl;
+            arg = Builder.CreateGEP(Builder.CreateLoad(logger.getVarAlloca(ASTarg->id)), vector<llvm::Value*>{c32(0), c32(0)});
+          }
+          // array is passed by value
           else {
-            if (logger.getVarType(ASTarg->id)->isArrayTy())
-              arg = Builder.CreateGEP(logger.getVarAlloca(ASTarg->id), c32(0));
-            else
+          	cerr << "[][][][] array by val" << endl;
+          	arg = Builder.CreateGEP(logger.getVarAlloca(ASTarg->id), vector<llvm::Value*>{c32(0), c32(0)});
+          }
+        }
+        // variable is not an array
+        else {
+        	cerr << "[][][] var is not array" << endl;
+          // variable is passed by reference
+          if (logger.isPointer(ASTarg->id)) {
+          	cerr << "[][][][] var by ref" << endl;
+            arg = Builder.CreateLoad(logger.getVarAlloca(ASTarg->id));
+          }
+          // variable is passed by value
+          else {
+          	cerr << "[][][][] var by val" << endl;
+            // is an element of an array
+            if (logger.getVarType(ASTarg->id)->isArrayTy()) {
+            	cerr << "[][][][][] element of array" << endl;
+            	auto index = ASTarg->left->codegen();
+              arg = Builder.CreateGEP(logger.getVarAlloca(ASTarg->id), vector<llvm::Value*>{c32(0), index});
+            }
+            // is a completely normal var
+            else {
+            	cerr << "[][][][][] noooormal" << endl;
               arg = logger.getVarAlloca(ASTarg->id);
+            }
           }
         }
       }
     }
     /* If expected argument is by value */
-    else
+    else {
+    	cerr << "[] expecting by value" << endl;    	
       arg = ASTarg->codegen();
+    }
     argv.push_back(arg);
+    cerr << "[] arg type is " << arg->getType()->isPointerTy() << endl;
     ASTargs = ASTargs->right;
 	}
 
@@ -302,6 +332,7 @@ llvm::Value * ASTWhile::codegen() {
   llvm::BasicBlock *CondBB = llvm::BasicBlock::Create(TheContext, "cond", TheFunction);
   llvm::BasicBlock *LoopBB = llvm::BasicBlock::Create(TheContext, "loop", TheFunction);
   llvm::BasicBlock *AfterBB = llvm::BasicBlock::Create(TheContext, "after", TheFunction);
+  Builder.CreateBr(CondBB);
   
   // Emit Condition block
   Builder.SetInsertPoint(CondBB);
@@ -316,7 +347,7 @@ llvm::Value * ASTWhile::codegen() {
 }
 
 llvm::Value * ASTRet::codegen() {
-  logger.addReturn();
+  logger.addReturn(Builder.GetInsertBlock()->getParent()->getName().str());
   if (this->left == nullptr) return Builder.CreateRetVoid();
   return Builder.CreateRet(this->left->codegen());
 }
@@ -403,5 +434,5 @@ void createstdlib() {
     FT = llvm::FunctionType::get(proc, vector<llvm::Type *>{i8->getPointerTo(), i8->getPointerTo()}, false);
     libFunctions.push_back(llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "strcat", TheModule.get()));
 
-    for (auto F: libFunctions) logger.addFunctionInScope(F);
+    for (auto F: libFunctions) logger.addFunctionInScope(F->getName().str(), F);
 }
