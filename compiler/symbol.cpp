@@ -603,7 +603,7 @@ void destroyType (Type type)
                 destroyType(type->refType);
                 mydelete(type);
             }
-        default: internal("Unknown type\n");
+        default: return;
     }
 }
 
@@ -624,7 +624,7 @@ unsigned int sizeOfType (Type type)
             return 10;
         case TYPE_ARRAY:
             return type->size * sizeOfType(type->refType);
-        default: internal("Unknown type\n");
+        default: return 0;
     }
     return 0;
 }
@@ -640,7 +640,7 @@ bool equalType (Type type1, Type type2)
         case TYPE_IARRAY:
         case TYPE_POINTER:
             return equalType(type1->refType, type2->refType);
-        default: internal("Unable to compare types\n");
+        default: return true;
     }
     return true;        
 }
