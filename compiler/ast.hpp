@@ -13,7 +13,7 @@ using namespace std;
 typedef enum {
   EQ, NE, LE, GE, LT, GT, AND, OR, NOT, // condition operators
   PLUS, MINUS, TIMES, DIV, MOD,         // expression operators
-  STRING                                // needed for codegen :(
+  STRING, INTEGER                       // needed for codegen :(
 } kind;
 
 /***************************
@@ -39,7 +39,7 @@ public:
 protected:
   // various constructors needed by children classes
   ASTNode(string s, ASTNode *l) : id(s), left(l) {};
-  ASTNode(int n) : num(n) {};
+  ASTNode(int n) : op(INTEGER), num(n) {};
   ASTNode(char c) { id = c; };
   ASTNode(string s) : op(STRING), id(s) {};
   ASTNode(string s, Type t, int n) : id(s) {
