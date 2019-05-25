@@ -6,3 +6,6 @@ lib
 
 # Ignore executables
 bin
+
+# Ignore .asm files everywhere
+**/*.asm

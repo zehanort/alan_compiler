@@ -1,10 +1,9 @@
 #!/bin/bash
 
 LIBDIR=lib
-BINDIR=bin
 
 PROGNAME=$(basename $1)
-EXEC=$BINDIR/$(basename $1 .alan).asm
+EXEC=$(basename $1 .alan).asm
 
 $BINDIR/alan $PROGNAME <$1 > $PROGNAME.ll
 nl --body-numbering=a $PROGNAME.ll
