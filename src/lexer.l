@@ -1,6 +1,6 @@
 %{
 #include <stdio.h>
-#include "symbol.hpp"
+#include <symbol.hpp>
 #include "general.hpp"
 #include "ast.hpp"
 #include "parser.hpp"

@@ -1,0 +1,15 @@
+#!/bin/bash
+
+LIBDIR=lib
+BINDIR=bin
+
+PROGNAME=$(basename $1)
+EXEC=$BINDIR/$(basename $1 .alan).asm
+
+$BINDIR/alan $PROGNAME <$1 > $PROGNAME.ll
+nl --body-numbering=a $PROGNAME.ll
+llvm-as $PROGNAME.ll
+llc -filetype=obj $PROGNAME.bc
+g++ -no-pie $PROGNAME.o $LIBDIR/libalanstd.a -o $EXEC
+chmod +x $EXEC
+rm $PROGNAME.{o,bc,ll} $LLFILENAME $OBJFILENAME

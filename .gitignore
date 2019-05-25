@@ -1,0 +1,8 @@
+# Ignore build dir
+build
+
+# Ignore library dir
+lib
+
+# Ignore executables
+bin
