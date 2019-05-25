@@ -7,5 +7,6 @@ main() : int
 	}
 {
 	b = 'a';
-	return xtend(b);
+	writeInteger(xtend(b));
+	writeChar('\n');
 }

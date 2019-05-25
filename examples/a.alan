@@ -1,0 +1,8 @@
+main () : proc
+r : int;
+f() : proc
+	{
+	r = 1;
+	}
+{
+}

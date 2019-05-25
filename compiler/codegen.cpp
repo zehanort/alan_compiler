@@ -29,21 +29,28 @@ Logger logger;
 
 llvm::Value *calcAddr (ASTNode *var, string function) {
 	llvm::Value *addr;
+	llvm::Type *t;
 	/* dereference if necessary */
-	if (logger.isPointer(var->id))
+	if (logger.isPointer(var->id)) {
+		cerr << "1" << endl;
 		addr = Builder.CreateLoad(logger.getVarAlloca(var->id));
-	else
+		t = logger.getVarType(var->id)->getPointerElementType();
+	}
+	else {
+		cerr << "2" << endl;
 		addr = logger.getVarAlloca(var->id);
+		t = logger.getVarType(var->id);
+	}
   
   if (var->type->refType != nullptr) {
     /* id is an array */
-    if (logger.getVarType(var->id)->isArrayTy()) {
+    if (t->isArrayTy()) {
       cerr << "*** " << function << " *** : " << var->id << " [] is array" << endl;
       addr = Builder.CreateGEP(addr, vector<llvm::Value *>{c32(0), c32(0)});
     }
     
     /* id is an iarray */
-    if (logger.getVarType(var->id)->isPointerTy()) {
+    if (t->isPointerTy()) {
       cerr << "*** " << function << " *** : " << var->id << " [] is iarray" << endl;
       addr = Builder.CreateGEP(addr, c32(0));
     }
@@ -54,14 +61,14 @@ llvm::Value *calcAddr (ASTNode *var, string function) {
     cerr << "*** " << function << " *** : " << var->id << " [] is var" << endl;
     
     /* variable is element of array (a[2]) */
-    if (logger.getVarType(var->id)->isArrayTy()) {
+    if (t->isArrayTy()) {
       cerr << "*** " << function << " *** : " << var->id << " [][] is var, array element" << endl;
       auto *index = var->left->codegen();
       addr = Builder.CreateGEP(addr, vector<llvm::Value *>{c32(0), index});
     }
     
     /* variable is element of iarray (a[2]) */
-    if (logger.getVarType(var->id)->isPointerTy()) {
+    if (t->isPointerTy()) {
       cerr << "*** " << function << " *** : " << var->id << " [][] is var, iarray element" << endl;
       auto *index = var->left->codegen();
       addr = Builder.CreateGEP(addr, index);
@@ -141,7 +148,8 @@ llvm::Value * ASTVdef::codegen() {
 }
 
 llvm::Value * ASTFdef::codegen() {
-  auto *params = this->left->left;
+ 	cerr << endl << "*** Function Def " << this->left->id << " ***" << endl;
+ 	auto *params = this->left->left;
   auto *locdefs = this->left->right;
   string Fname = this->left->id;
   llvm::Type *retType = type_to_llvm(this->left->type);
@@ -187,7 +195,8 @@ llvm::Value * ASTFdef::codegen() {
   }
 
   /* step 5: codegen body */
-  this->right->codegen();
+  if (this->right != nullptr)
+  	this->right->codegen();
 
   /* step 6: check if return was omitted */
   if (!logger.returnAddedInScopeFunction(Fname)) {

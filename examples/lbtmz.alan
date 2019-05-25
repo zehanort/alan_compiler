@@ -1,11 +1,13 @@
 solve () : int
-	foo(x : int, y : reference int []) : proc
+	foo(x : int, y : reference int []) : int
 	i : int;
 	{
-		i = 123;
+		i = 1;
 		y[0] = i+x;
+		return y[0];
 	}
 	pin : int [10];
 {
-	foo(42, pin);
+	writeInteger(foo(41, pin));
+	writeChar('\n');
 }
