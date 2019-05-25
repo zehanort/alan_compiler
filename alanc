@@ -1,6 +1,7 @@
 #!/bin/bash
 
 LIBDIR=lib
+BINDIR=bin
 
 PROGNAME=$(basename $1)
 EXEC=$(basename $1 .alan).asm
