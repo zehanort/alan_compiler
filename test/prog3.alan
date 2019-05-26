@@ -96,6 +96,8 @@ program () : proc
 				writeString("Error: Wrong Operator!\n");
 			}
 			else{
+				err = 0;
+				
 				readFraction(a1,p1);
 				
 				readFraction(a2,p2);

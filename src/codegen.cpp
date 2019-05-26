@@ -32,12 +32,10 @@ llvm::Value *calcAddr (ASTNode *var, string function) {
 	llvm::Type *t;
 	/* dereference if necessary */
 	if (logger.isPointer(var->id)) {
-		cerr << "1" << endl;
 		addr = Builder.CreateLoad(logger.getVarAlloca(var->id));
 		t = logger.getVarType(var->id)->getPointerElementType();
 	}
 	else {
-		cerr << "2" << endl;
 		addr = logger.getVarAlloca(var->id);
 		t = logger.getVarType(var->id);
 	}
@@ -50,7 +48,7 @@ llvm::Value *calcAddr (ASTNode *var, string function) {
     }
     
     /* id is an iarray */
-    if (t->isPointerTy()) {
+    else {
       cerr << "*** " << function << " *** : " << var->id << " [] is iarray" << endl;
       addr = Builder.CreateGEP(addr, c32(0));
     }
@@ -67,17 +65,19 @@ llvm::Value *calcAddr (ASTNode *var, string function) {
       addr = Builder.CreateGEP(addr, vector<llvm::Value *>{c32(0), index});
     }
     
-    /* variable is element of iarray (a[2]) */
-    if (t->isPointerTy()) {
-      cerr << "*** " << function << " *** : " << var->id << " [][] is var, iarray element" << endl;
-      auto *index = var->left->codegen();
-      addr = Builder.CreateGEP(addr, index);
-    }
-    
-    /* variable is as simple as it gets */
     else {
-      cerr << "*** " << function << " *** : " << var->id << " [][] is var, normal" << endl;
-    }
+	    /* variable is element of iarray (a[2]) */
+    	if (var->left != nullptr) {
+	      cerr << "*** " << function << " *** : " << var->id << " [][] is var, iarray element" << endl;
+  	    auto *index = var->left->codegen();
+    	  addr = Builder.CreateGEP(addr, index);
+    	}
+    
+	    /* variable is as simple as it gets */
+	    else {
+	      cerr << "*** " << function << " *** : " << var->id << " [][] is var, normal" << endl;
+	    }
+	  }
   }
   return addr;
 }
@@ -123,8 +123,7 @@ void codegen(ASTNode *t) {
 }
 
 llvm::Value * ASTId::codegen() {
-	auto *ret = Builder.CreateLoad(calcAddr(this, "ID"));
-	return ret;
+	return Builder.CreateLoad(calcAddr(this, "ID"));
 }
 
 llvm::Value * ASTInt::codegen() {
@@ -148,7 +147,7 @@ llvm::Value * ASTVdef::codegen() {
 }
 
 llvm::Value * ASTFdef::codegen() {
- 	cerr << endl << "*** Function Def " << this->left->id << " ***" << endl;
+ 	cerr << "*** FD *** : " << this->left->id << endl;
  	auto *params = this->left->left;
   auto *locdefs = this->left->right;
   string Fname = this->left->id;
@@ -160,7 +159,6 @@ llvm::Value * ASTFdef::codegen() {
   while (params != nullptr) {
     parameterNames.push_back(params->left->id);
     parameterTypes.push_back(type_to_llvm(params->left->type, params->left->pm));
-    cerr << "[FDef] function " << Fname << ": param " << params->left->id << ": type " << params->left->type->kind << endl;
     params = params->right;
   }
 
@@ -219,12 +217,11 @@ llvm::Value * ASTPar::codegen() { return nullptr; }
 llvm::Value * ASTAssign::codegen() {
 	auto *expr = this->right->codegen();
 	auto *addr = calcAddr(this->left, "AS");
-	auto *ret = Builder.CreateStore(expr, addr);
-	return ret;
+	return Builder.CreateStore(expr, addr);
 }
 
 llvm::Value * ASTFcall::codegen() {
-	cerr << endl << "*** Function " << this->id << " ***" << endl;
+	cerr << "*** FC *** : " << this->id << endl;
 	llvm::Function *F = logger.getFunctionInScope(this->id);
 	vector<llvm::Value*> argv;
 	auto *ASTargs = this->left;
@@ -236,31 +233,28 @@ llvm::Value * ASTFcall::codegen() {
 
     /* If expected argument is by value */
  		if (!Arg.getType()->isPointerTy()) {
- 			cerr << "[] expecting by value" << endl;
- 			//if (arg && arg->getType()) cerr << "[] got " << arg->getType()->getTypeID() << endl;
+ 			// cerr << "*** FC *** : " << this->id << " : expecting by value" << endl;
 	    arg = ASTarg->codegen();
  		}
  		else {
- 			cerr << "[] expecting by reference"<< endl;
+ 			// cerr << "*** FC *** : " << this->id << " : expecting by reference" << endl;
  			/* string literal */
-      // if (typeid(ASTarg) == typeid(new ASTString("")))
       if (ASTarg->op == STRING) {
         arg = ASTarg->codegen();
       }
       /* variable */
       else {
-      	arg = calcAddr(ASTarg, "FC");
+      	arg = calcAddr(ASTarg, "ID");
       }
  		}
 
     argv.push_back(arg);
-    //if (Arg.getType()) cerr << "[] want " << Arg.getType() << endl;
-    //if (arg && arg->getType()) cerr << "[] got " << arg->getType() << endl;
+    // if (Arg.getType()) cerr << "*** FC *** : " << this->id << " : want " << Arg.getType()->getTypeID() << endl;
+    // if (arg && arg->getType()) cerr << "*** FC *** : " << this->id << " : got " << arg->getType()->getTypeID() << endl;
     ASTargs = ASTargs->right;
 	}
 
-	auto *ret = Builder.CreateCall(F, argv);
-	return ret;
+	return Builder.CreateCall(F, argv);
 }
 
 llvm::Value * ASTFcall_stmt::codegen() {

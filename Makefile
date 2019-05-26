@@ -29,7 +29,7 @@ $(BUILDDIR)/parser.hpp $(BUILDDIR)/parser.cpp: $(SRCDIR)/parser.ypp
 
 $(BUILDDIR)/symbol.o     : $(SRCDIR)/symbol.cpp $(INCDIR)/symbol.hpp $(INCDIR)/general.hpp $(INCDIR)/error.hpp
 	mkdir -p $(BUILDDIR)
-	$(CXX) $(CXXFLAGS) -Wno-cast-qual -o $@ -c $<
+	$(CXX) $(CXXFLAGS) -Wno-implicit-fallthrough -Wno-cast-qual -o $@ -c $<
 
 $(BUILDDIR)/%.o: $(SRCDIR)/%.cpp
 	mkdir -p $(BUILDDIR)
