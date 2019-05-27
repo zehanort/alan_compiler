@@ -134,6 +134,14 @@ public:
         internal("Function \"%s\" not in scope.", id);
         return nullptr;
     };
+
+    unordered_map<string, llvm::Type*> getCurrentScopeVarTypes() {
+        return this->scopeLogs.back().variableTypes;
+    };
+
+    unordered_map<string, llvm::AllocaInst*> getCurrentScopeVarAllocas() {
+        return this->scopeLogs.back().variableAllocas;
+    };
 };
 
 #endif

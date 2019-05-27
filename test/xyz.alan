@@ -1,0 +1,26 @@
+main(): proc
+	f(): int
+		x:int;
+		g(): proc
+			y:int;
+			h(): proc
+				z:int;
+			{
+				z = 1;
+				y = 1;
+				x = x+1;
+			}
+		{
+			y = 1;
+			x = x+1;
+			h();
+		}
+	{
+		x = 1;
+		g();
+		return x;
+	}
+{
+	writeInteger(f());
+	writeChar('\n');
+}

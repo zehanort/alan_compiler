@@ -154,12 +154,32 @@ llvm::Value * ASTFdef::codegen() {
   llvm::Type *retType = type_to_llvm(this->left->type);
   vector<string> parameterNames;
   vector<llvm::Type *> parameterTypes;
+  vector<string> outerScopeVarsNames;
+  unordered_map<string, llvm::Type*> outerScopeVarsTypes;
+  unordered_map<string, llvm::AllocaInst*> outerScopeVarsAllocas;
 
-  /* step 1: log param types and names */
+  /* step 1a: log param types and names */
   while (params != nullptr) {
     parameterNames.push_back(params->left->id);
     parameterTypes.push_back(type_to_llvm(params->left->type, params->left->pm));
     params = params->right;
+  }
+
+  /* step 1b: add references to outer scope variables as parameters */
+  outerScopeVarsTypes = logger.getCurrentScopeVarTypes();
+  outerScopeVarsAllocas = logger.getCurrentScopeVarAllocas();
+  for (auto var: outerScopeVarsTypes) outerScopeVarsNames.push_back(var.first);
+
+  llvm::Type *varType;
+  llvm::AllocaInst *varAlloca;
+  for (string var : outerScopeVarsNames) {
+    varType = outerScopeVarsTypes[var];
+    varAlloca = outerScopeVarsAllocas[var];
+    parameterNames.push_back(var);
+    /* if var is pointer, leave it as it is */
+    if (varType->isPointerTy()) parameterTypes.push_back(varType);
+    /* else, we need to pass a reference to it as parameter */
+    else parameterTypes.push_back(varType->getPointerTo());
   }
 
   llvm::FunctionType *FT =
@@ -227,17 +247,27 @@ llvm::Value * ASTFcall::codegen() {
 	auto *ASTargs = this->left;
 
 	for (auto &Arg : F->args()) {
+
+    llvm::Value *arg;
+    /* function with no params, only outer scope ones */
+    if (ASTargs == nullptr) {
+      argv.push_back(logger.getVarAlloca(Arg.getName().str()));
+      continue;      
+    }
     
     auto *ASTarg = ASTargs->left;
-    llvm::Value *arg;
+
+    /* check if done with real params (outer scope vars left) */
+    if (ASTarg == nullptr) {
+      argv.push_back(logger.getVarAlloca(Arg.getName().str()));
+      continue;
+    }
 
     /* If expected argument is by value */
  		if (!Arg.getType()->isPointerTy()) {
- 			// cerr << "*** FC *** : " << this->id << " : expecting by value" << endl;
 	    arg = ASTarg->codegen();
  		}
  		else {
- 			// cerr << "*** FC *** : " << this->id << " : expecting by reference" << endl;
  			/* string literal */
       if (ASTarg->op == STRING) {
         arg = ASTarg->codegen();
@@ -247,11 +277,8 @@ llvm::Value * ASTFcall::codegen() {
       	arg = calcAddr(ASTarg, "ID");
       }
  		}
-
     argv.push_back(arg);
-    // if (Arg.getType()) cerr << "*** FC *** : " << this->id << " : want " << Arg.getType()->getTypeID() << endl;
-    // if (arg && arg->getType()) cerr << "*** FC *** : " << this->id << " : got " << arg->getType()->getTypeID() << endl;
-    ASTargs = ASTargs->right;
+    if (ASTargs->left != nullptr) ASTargs = ASTargs->right;
 	}
 
 	return Builder.CreateCall(F, argv);

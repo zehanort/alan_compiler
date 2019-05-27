@@ -1,0 +1,11 @@
+main () : proc
+	r : int;
+	f() : proc
+	{
+		r = 1;
+	}
+{
+	r = 0;
+	f();
+	writeInteger(r);
+}

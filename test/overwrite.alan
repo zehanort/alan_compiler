@@ -1,0 +1,6 @@
+main(): proc
+	writeInteger(a:byte): byte { return a; }
+{
+	writeChar(writeInteger(shrink(39)));
+	writeChar('\n');
+}

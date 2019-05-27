@@ -7,8 +7,16 @@ PROGNAME=$(basename $1)
 EXEC=$(basename $1 .alan).asm
 
 $BINDIR/alan $PROGNAME <$1 > $PROGNAME.ll
-nl --body-numbering=a $PROGNAME.ll
+
+#nl --body-numbering=a $PROGNAME.ll
+cat $PROGNAME.ll
 llvm-as $PROGNAME.ll
+if [ $? -ne 0 ]; then
+	echo "alanc: Failed to compile generated LLVM IR code. Aborting."
+	rm $PROGNAME.ll
+	exit 2
+fi
+
 llc -filetype=obj $PROGNAME.bc
 g++ -no-pie $PROGNAME.o $LIBDIR/libalanstd.a -o $EXEC
 chmod +x $EXEC
