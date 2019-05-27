@@ -172,6 +172,8 @@ llvm::Value * ASTFdef::codegen() {
 
   llvm::Type *varType;
   for (string var : outerScopeVarsNames) {
+    /* skip shadowed outer scope variables */
+    if (find(parameterNames.begin(), parameterNames.end(), var) != parameterNames.end()) continue;
     varType = outerScopeVarsTypes[var];
     parameterNames.push_back(var);
     /* if var is pointer, leave it as it is */
