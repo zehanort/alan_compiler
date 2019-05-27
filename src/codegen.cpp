@@ -171,10 +171,8 @@ llvm::Value * ASTFdef::codegen() {
   for (auto var: outerScopeVarsTypes) outerScopeVarsNames.push_back(var.first);
 
   llvm::Type *varType;
-  llvm::AllocaInst *varAlloca;
   for (string var : outerScopeVarsNames) {
     varType = outerScopeVarsTypes[var];
-    varAlloca = outerScopeVarsAllocas[var];
     parameterNames.push_back(var);
     /* if var is pointer, leave it as it is */
     if (varType->isPointerTy()) parameterTypes.push_back(varType);
@@ -200,7 +198,7 @@ llvm::Value * ASTFdef::codegen() {
 
   /* step 3: create allocas for params */
   for (auto &arg : F->args()) {
-  	auto *alloca = Builder.CreateAlloca(arg.getType(), nullptr, arg.getName());
+    auto *alloca = Builder.CreateAlloca(arg.getType(), nullptr, arg.getName());
     Builder.CreateStore(&arg, alloca);
     logger.addVariable(arg.getName(), arg.getType(), alloca);
   }
