@@ -27,6 +27,12 @@ llvm::Type * type_to_llvm(Type type, PassMode pm = PASS_BY_VALUE) {
 
 Logger logger;
 
+llvm::Value *deref (llvm::Value *var) {
+  while (var->getType()->getPointerElementType()->isPointerTy())
+    var = Builder.CreateLoad(var);
+  return var;
+}
+
 llvm::Value *calcAddr (ASTNode *var, string function) {
 	llvm::Value *addr;
 	llvm::Type *t;
@@ -177,9 +183,11 @@ llvm::Value * ASTFdef::codegen() {
     varType = outerScopeVarsTypes[var];
     parameterNames.push_back(var);
     /* if var is pointer, leave it as it is */
-    if (varType->isPointerTy()) parameterTypes.push_back(varType);
+    if (varType->isPointerTy())
+     	parameterTypes.push_back(varType);
     /* else, we need to pass a reference to it as parameter */
-    else parameterTypes.push_back(varType->getPointerTo());
+    else
+    	parameterTypes.push_back(varType->getPointerTo());
   }
 
   llvm::FunctionType *FT =
@@ -200,9 +208,9 @@ llvm::Value * ASTFdef::codegen() {
 
   /* step 3: create allocas for params */
   for (auto &arg : F->args()) {
-    auto *alloca = Builder.CreateAlloca(arg.getType(), nullptr, arg.getName());
+    auto *alloca = Builder.CreateAlloca(arg.getType(), nullptr, arg.getName().str());
     Builder.CreateStore(&arg, alloca);
-    logger.addVariable(arg.getName(), arg.getType(), alloca);
+    logger.addVariable(arg.getName().str(), arg.getType(), alloca);
   }
 
   /* step 4: codegen local defs */
@@ -251,15 +259,15 @@ llvm::Value * ASTFcall::codegen() {
     llvm::Value *arg;
     /* function with no params, only outer scope ones */
     if (ASTargs == nullptr) {
-      argv.push_back(logger.getVarAlloca(Arg.getName().str()));
-      continue;      
+      argv.push_back(deref(logger.getVarAlloca(Arg.getName().str())));
+      continue;
     }
     
     auto *ASTarg = ASTargs->left;
 
     /* check if done with real params (outer scope vars left) */
     if (ASTarg == nullptr) {
-      argv.push_back(logger.getVarAlloca(Arg.getName().str()));
+      argv.push_back(deref(logger.getVarAlloca(Arg.getName().str())));
       continue;
     }
 
