@@ -368,9 +368,8 @@ llvm::Value * ASTRet::codegen() {
 }
 
 llvm::Value * ASTSeq::codegen() {
-  this->left->codegen();
-  if (this->right)
-    this->right->codegen();
+  if (this->left) this->left->codegen();
+  if (this->right) this->right->codegen();
   return nullptr;
 }
 

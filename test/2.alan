@@ -1,0 +1,4 @@
+main(i : int) : proc
+{
+writeString("Hello World\n");
+}

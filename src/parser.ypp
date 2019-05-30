@@ -124,7 +124,7 @@ compound-stmt:
 ;
 
 stmt-list:
-	/* nothing */ { $$ = NULL; }
+	/* nothing */ { $$ = new ASTSeq(NULL, NULL); }
 |	stmt stmt-list { $$ = new ASTSeq($1, $2); }
 ;
 

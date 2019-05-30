@@ -250,7 +250,7 @@ void ASTRet::sem() {
 
 void ASTSeq::sem() {
 	linecount = line;
-  left->sem();
+  if (left) left->sem();
   if (right) right->sem();
   return;
 }
