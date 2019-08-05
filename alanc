@@ -1,23 +1,117 @@
-#!/bin/bash
+#!/usr/bin/env python3.7
 
-LIBDIR=lib
-BINDIR=bin
+import argparse
+import subprocess as sp
+from os import sep
+from tempfile import TemporaryFile
 
-PROGNAME=$(basename $1)
-EXEC=$(basename $1 .alan).asm
+# define the arguments of the compiler
+parser = argparse.ArgumentParser(
+    description='ALANC - the Alan Limitless, Amazing and Neat Compiler'
+)
 
-$BINDIR/alan $PROGNAME <$1 > $PROGNAME.ll
+parser.add_argument('infile',
+    # nargs='?', type=str,
+    nargs='?', type=argparse.FileType('r'),
+    help='(if -f or -i not given) the Alan source code to compile'
+)
+parser.add_argument('-O',
+    help='optimize IR and final (assembly) code',
+    action='store_true',
+    dest='optimize'
+)
+parser.add_argument('-a', '--all',
+    help='emit IR and assembly code in two seperate files (switched off by default)',
+    action='store_true',
+    dest='store_IR_and_final'
+)
+parser.add_argument('-i',
+    help='read source code from stdin, print IR code to stdout',
+    action='store_true',
+    dest='dump_IR'
+)
+parser.add_argument('-f',
+    help='read source code from stdin, print final code to stdout',
+    action='store_true',
+    dest='dump_final'
+)
+parser.add_argument('-o',
+    help='(if -f or -i not given) the name of the produced executable (default: a.out)',
+    default='a.out',
+    dest='outname'
+)
 
-#nl --body-numbering=a $PROGNAME.ll
-cat $PROGNAME.ll
-llvm-as $PROGNAME.ll
-if [ $? -ne 0 ]; then
-	echo "alanc: Failed to compile generated LLVM IR code. Aborting."
-	rm $PROGNAME.ll
-	exit 2
-fi
+args = parser.parse_args()
 
-llc -filetype=obj $PROGNAME.bc
-g++ -no-pie $PROGNAME.o $LIBDIR/libalanstd.a -o $EXEC
-chmod +x $EXEC
-rm $PROGNAME.{o,bc,ll} $LLFILENAME $OBJFILENAME
+# check that the input comes from a single source (either a file or stdin)
+if (args.dump_IR or args.dump_final) and args.infile is not None:
+    parser.error('using the -i or the -f flag and providing an infile name are conflicting')
+
+# check that we actually have something to do :)
+if not args.dump_IR and not args.dump_final and args.infile is None:
+    parser.error('either one of the -i and -f flags or an infile name must be given')
+
+# define program name
+if args.infile is not None:
+    progname = args.infile.name
+    progname = progname if progname.split('.')[-1] != 'alan' else progname.split('.alan')[0]
+    progname = progname.split(sep)[-1]
+else:
+    progname = 'alan_program'
+
+# define some command line utilities needed to compile Alan programs
+alan_libraries = 'lib/libalanstd.a'
+ir_compiler = 'bin/alan'
+final_compiler = 'llc'
+final_compiler_flags = '-filetype=obj'
+optimizer = 'opt'
+optimizer_flags = ''
+linker = 'clang'
+linker_flags = f'{alan_libraries} -o {args.outname}'
+
+### compile
+# step 1: source code to LLVM IR
+ir_code, stderr = sp.Popen(
+    [ir_compiler, progname],
+    stdin=args.infile, stdout=sp.PIPE
+).communicate()
+
+if stderr is not None:
+    exit(-1)
+
+ir_code_printable = ir_code.decode('ascii')
+
+# step 2: optimize LLVM IR
+if args.optimize:
+    pass
+
+# step 3: LLVM IR to assembly
+final_compile = sp.run(
+    [final_compiler, final_compiler_flags],
+    stdout=sp.PIPE, stderr=sp.PIPE,
+    input=ir_code
+)
+
+if final_compile.stderr:
+    exit(-1)
+
+final_code = final_compile.stdout
+final_code_file = TemporaryFile()
+final_code_file.write(final_code)
+
+# step 4: optimize assembly
+if args.optimize:
+    pass
+
+# step 5: create executable
+linking = sp.run(
+    [linker, linker_flags],
+    stdout=sp.PIPE, stderr=sp.PIPE,
+    input=final_code_file
+)
+
+if linking.stderr:
+    exit(-1)
+
+print(linking.stdout)
+print('done')
