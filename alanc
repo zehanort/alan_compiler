@@ -2,7 +2,9 @@
 
 import argparse
 import subprocess as sp
-from os import sep
+from os import remove
+from os.path import split, join
+from sys import stdin, stdout, stderr
 
 # define the arguments of the compiler
 parser = argparse.ArgumentParser(
@@ -25,14 +27,19 @@ parser.add_argument('-a', '--all',
     dest='store_IR_and_final'
 )
 parser.add_argument('-i',
-    help='read source code from stdin, print IR code to stdout',
+    help='read source code from stdin, print IR code to stdout, then exit (no executable is produced)',
     action='store_true',
     dest='dump_IR'
 )
 parser.add_argument('-f',
-    help='read source code from stdin, print final code to stdout',
+    help='read source code from stdin, print final code to stdout, then exit (no executable is produced)',
     action='store_true',
     dest='dump_final'
+)
+parser.add_argument('-c',
+    help='create object file and stop, skipping the linking phase',
+    action='store_true',
+    dest='no_linking'
 )
 parser.add_argument('-o',
     help='(if -f or -i not given) the name of the produced executable (default: a.out)',
@@ -42,21 +49,36 @@ parser.add_argument('-o',
 
 args = parser.parse_args()
 
+dump_IR_or_final = args.dump_IR or args.dump_final
+
 # check that the input comes from a single source (either a file or stdin)
-if (args.dump_IR or args.dump_final) and args.infile is not None:
+if dump_IR_or_final and args.infile is not None:
     parser.error('using the -i or the -f flag and providing an infile name are conflicting')
 
 # check that we actually have something to do :)
-if not args.dump_IR and not args.dump_final and args.infile is None:
+if not dump_IR_or_final and args.infile is None:
     parser.error('either one of the -i and -f flags or an infile name must be given')
+
+# check that only one of the -i and -f flags are given
+if args.dump_IR and args.dump_final:
+    parser.error('the -i and -f flags are mutually exlusive')
+
+# do not allow printing code on screen and storing it in files at the same time (overkill)
+if dump_IR_or_final and args.store_IR_and_final:
+    parser.error('using the -i or the -f flag along with the -a flag is not allowed')
+
+# a friendly reminder
+if dump_IR_or_final and args.outname != 'a.out':
+    parser.error('usage of the -o flag along with the -i or the -f flag is meaningless')
 
 # define program name
 if args.infile is not None:
-    progname = args.infile.name
+    basedir, progname = split(args.infile.name)
     progname = progname if progname.split('.')[-1] != 'alan' else progname.split('.alan')[0]
-    progname = progname.split(sep)[-1]
 else:
-    progname = 'alan_program'
+    basedir = ''
+    progname = 'alan_from_stdin'
+
 objname = progname + '.o'
 
 # define some command line utilities needed to compile Alan programs
@@ -65,50 +87,89 @@ ir_compiler = 'bin/alan'
 final_compiler = 'llc'
 final_compiler_flags = ['-filetype=obj', f'-o={objname}']
 optimizer = 'opt'
-optimizer_flags = ''
+optimizer_flags = ['-O3', '-S']
 linker = 'clang'
 linker_flags = [objname, alan_libraries, '-o', args.outname]
 
-### compile
-# step 1: source code to LLVM IR
-ir_code, stderr = sp.Popen(
-    [ir_compiler, progname],
-    stdin=args.infile, stdout=sp.PIPE
-).communicate()
+if args.dump_IR or args.dump_final:
+    initial_input = stdin
+else:
+    initial_input = args.infile
 
-if stderr is not None:
+### compile ###
+# step 1: source code to LLVM IR
+ir_code_proc = sp.run(
+    [ir_compiler, progname],
+    stdin=initial_input, stdout=sp.PIPE
+)
+
+if ir_code_proc.returncode != 0:
     exit(-1)
 
-ir_code_printable = ir_code.decode('ascii')
+ir_code = ir_code_proc.stdout
 
 # step 2: optimize LLVM IR
 if args.optimize:
-    pass
+    ir_opt = sp.run(
+        [optimizer, *optimizer_flags],
+        stdout=sp.PIPE, stderr=sp.PIPE,
+        input=ir_code
+    )
+    if ir_opt.stderr:
+        stderr.write(ir_opt.stderr.decode('ascii'))
+        exit(-1)
+    ir_code = ir_opt.stdout
 
-# step 3: LLVM IR to assembly
+# step 2.5: store IR in a file or dump it if requested
+if args.store_IR_and_final:
+    with open(join(basedir, progname + '.imm'), 'w') as f:
+        f.write(ir_code.decode('ascii'))
+
+if args.dump_IR:
+    print(ir_code.decode('ascii'))
+    exit(0)
+
+# step 3: LLVM IR to assembly, with optimization if requested
+final_compile_cmd = [final_compiler, *final_compiler_flags]
+if args.optimize:
+    final_compile_cmd.append('-O3')
+
 final_compile = sp.run(
-    [final_compiler, *final_compiler_flags],
+    final_compile_cmd,
     stdout=sp.PIPE, stderr=sp.PIPE,
     input=ir_code
 )
 
 if final_compile.stderr:
-    print(final_compile.stderr.decode('ascii'))
+    stderr.write(final_compile.stderr.decode('ascii'))
     exit(-1)
 
-final_code = final_compile.stdout
+# step 3.5: store assembly in a file or dump it if requested
+if args.store_IR_and_final or args.dump_final:
+    final_compile_cmd = [final_compiler]
+    if args.optimize:
+        final_compile_cmd.append('-O3')
 
-# step 4: optimize assembly
-if args.optimize:
-    pass
+if args.store_IR_and_final:
+    with open(join(basedir, progname + '.asm'), 'w') as f:
+        sp.run(final_compile_cmd, stdout=f, stderr=sp.PIPE, input=ir_code)
 
-# step 5: create executable
+if args.dump_final:
+    final_code = sp.run(final_compile_cmd, stdout=stdout, stderr=stderr, input=ir_code)
+    remove(objname)
+    exit(0)
+
+# step 4: link and create executable
+if args.no_linking:
+    exit(0)
+
 linking = sp.run(
     [linker, *linker_flags],
     stdout=sp.PIPE, stderr=sp.PIPE,
-    input=final_code
 )
 
 if linking.stderr:
-    print(linking.stderr)
+    stderr.write(linking.stderr)
     exit(-1)
+
+remove(objname)
