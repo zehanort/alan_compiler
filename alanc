@@ -3,7 +3,6 @@
 import argparse
 import subprocess as sp
 from os import sep
-from tempfile import TemporaryFile
 
 # define the arguments of the compiler
 parser = argparse.ArgumentParser(
@@ -58,16 +57,17 @@ if args.infile is not None:
     progname = progname.split(sep)[-1]
 else:
     progname = 'alan_program'
+objname = progname + '.o'
 
 # define some command line utilities needed to compile Alan programs
 alan_libraries = 'lib/libalanstd.a'
 ir_compiler = 'bin/alan'
 final_compiler = 'llc'
-final_compiler_flags = '-filetype=obj'
+final_compiler_flags = ['-filetype=obj', f'-o={objname}']
 optimizer = 'opt'
 optimizer_flags = ''
 linker = 'clang'
-linker_flags = f'{alan_libraries} -o {args.outname}'
+linker_flags = [objname, alan_libraries, '-o', args.outname]
 
 ### compile
 # step 1: source code to LLVM IR
@@ -87,17 +87,16 @@ if args.optimize:
 
 # step 3: LLVM IR to assembly
 final_compile = sp.run(
-    [final_compiler, final_compiler_flags],
+    [final_compiler, *final_compiler_flags],
     stdout=sp.PIPE, stderr=sp.PIPE,
     input=ir_code
 )
 
 if final_compile.stderr:
+    print(final_compile.stderr.decode('ascii'))
     exit(-1)
 
 final_code = final_compile.stdout
-final_code_file = TemporaryFile()
-final_code_file.write(final_code)
 
 # step 4: optimize assembly
 if args.optimize:
@@ -105,13 +104,11 @@ if args.optimize:
 
 # step 5: create executable
 linking = sp.run(
-    [linker, linker_flags],
+    [linker, *linker_flags],
     stdout=sp.PIPE, stderr=sp.PIPE,
-    input=final_code_file
+    input=final_code
 )
 
 if linking.stderr:
+    print(linking.stderr)
     exit(-1)
-
-print(linking.stdout)
-print('done')
