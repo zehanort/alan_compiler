@@ -8,7 +8,7 @@ from sys import stdin, stdout, stderr
 
 # define the arguments of the compiler
 parser = argparse.ArgumentParser(
-    description='ALANC - the Alan Limitless, Amazing and Neat Compiler'
+    description='ALANC - the Alan Limitless and Amazingly Neat Compiler'
 )
 
 parser.add_argument('infile',

@@ -48,25 +48,19 @@ llvm::Value *calcAddr (ASTNode *var, string function) {
   
   if (var->type->refType != nullptr) {
     /* id is an array */
-    if (t->isArrayTy()) {
-      cerr << "*** " << function << " *** : " << var->id << " [] is array" << endl;
+    if (t->isArrayTy())
       addr = Builder.CreateGEP(addr, vector<llvm::Value *>{c32(0), c32(0)});
-    }
     
     /* id is an iarray */
-    else {
-      cerr << "*** " << function << " *** : " << var->id << " [] is iarray" << endl;
+    else
       addr = Builder.CreateGEP(addr, c32(0));
-    }
   }
   
   /* id is a variable */
   else {
-    cerr << "*** " << function << " *** : " << var->id << " [] is var" << endl;
     
     /* variable is element of array (a[2]) */
     if (t->isArrayTy()) {
-      cerr << "*** " << function << " *** : " << var->id << " [][] is var, array element" << endl;
       auto *index = var->left->codegen();
       addr = Builder.CreateGEP(addr, vector<llvm::Value *>{c32(0), index});
     }
@@ -74,15 +68,11 @@ llvm::Value *calcAddr (ASTNode *var, string function) {
     else {
 	    /* variable is element of iarray (a[2]) */
     	if (var->left != nullptr) {
-	      cerr << "*** " << function << " *** : " << var->id << " [][] is var, iarray element" << endl;
   	    auto *index = var->left->codegen();
     	  addr = Builder.CreateGEP(addr, index);
     	}
     
 	    /* variable is as simple as it gets */
-	    else {
-	      cerr << "*** " << function << " *** : " << var->id << " [][] is var, normal" << endl;
-	    }
 	  }
   }
   return addr;
@@ -153,7 +143,6 @@ llvm::Value * ASTVdef::codegen() {
 }
 
 llvm::Value * ASTFdef::codegen() {
- 	cerr << "*** FD *** : " << this->left->id << endl;
  	auto *params = this->left->left;
   auto *locdefs = this->left->right;
   string Fname = this->left->id;
@@ -249,7 +238,6 @@ llvm::Value * ASTAssign::codegen() {
 }
 
 llvm::Value * ASTFcall::codegen() {
-	cerr << "*** FC *** : " << this->id << endl;
 	llvm::Function *F = logger.getFunctionInScope(this->id);
 	vector<llvm::Value*> argv;
 	auto *ASTargs = this->left;
