@@ -54,6 +54,7 @@ protected:
   ASTNode(ASTNode *l) : left(l) {};
   ASTNode(ASTNode *l, ASTNode *r) : left(l), right(r) {};
 
+public:
   virtual ~ASTNode() {
     delete left;
     delete right;

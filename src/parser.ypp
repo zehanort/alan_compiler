@@ -204,5 +204,6 @@ int main(int argc, char *argv[]) {
 	destroySymbolTable();
 	if (sem_failed) return sem_failed;
 	codegen(t);
+	delete t;
 	return 0;
 }
