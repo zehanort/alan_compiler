@@ -66,6 +66,7 @@ COMMENTS_1_LINE "--".*\n
 <MULLINE_COMMENT>"*"+")"	{ if (--nesting_level == 0) BEGIN(INITIAL); }
 <MULLINE_COMMENT>"*"+		{ /* nothing */ }
 <MULLINE_COMMENT>[^(*\n]+	{ /* nothing */ }
+<MULLINE_COMMENT>"("		{ /* nothing */ }
 <MULLINE_COMMENT>\n			{ linecount++; }
 
 <<EOF>>					{ return T_eof; }

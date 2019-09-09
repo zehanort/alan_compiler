@@ -1,7 +1,7 @@
 main() : proc
     (* this is a test
         (* 
-            ( NESTED COMMENT )
+            (
         *)
     *)
     i : int;
