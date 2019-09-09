@@ -1,0 +1,12 @@
+main() : proc
+    (* this is a test
+        (* 
+            ( NESTED COMMENT )
+        *)
+    *)
+    i : int;
+{
+    i = 0;
+    writeInteger(i);
+    writeString("\n");
+}

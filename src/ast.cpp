@@ -6,10 +6,11 @@
 
 using namespace std;
 
-/* some globals to keep track of functions */
+// some globals to keep track of functions
 stack<SymbolEntry *> funcList;
 SymbolEntry *currFunction;
 
+// function that calls error() if types l and r are not the same or not supported by operator op
 void checkTypes(Type l, Type r, const char *op) {
   if (!equalType(l, r))
   	error("type mismatch in %s operator", op);
@@ -17,22 +18,33 @@ void checkTypes(Type l, Type r, const char *op) {
     error("only int and byte types supported by %s operator", op);
 }
 
+// function that looks up and returns SymbolEntry named id (in any scope)
 SymbolEntry * lookup(string id) {
   return lookupEntry(id.c_str(), LOOKUP_ALL_SCOPES, true);
 }
 
+/* ---------------------------------------------------------------------
+   ------------------ sem() method: semantic analysis ------------------
+   --------------------------------------------------------------------- */
+
+// semantic analysis of ASTId Node
 void ASTId::sem() {
 	linecount = line;
-  if (left) left->sem();
-  SymbolEntry *e = lookup(id);
-  if (!e) {     // ID not found; dummy value for type
+  if (left) left->sem();											// semantic analysis of index (if any)
+  SymbolEntry *e = lookup(id);								// lookup in symbol table
+  // if ID not found -> dummy value for type and return
+  if (!e) {
     type = typeBoolean;
     return;
   }
+  // if ID is found:
   switch (e->entryType) {
+  	// if entry is a variable:
     case ENTRY_VARIABLE:
+    // if there is no index, node's type <- variable's type
     if (left == NULL)
       type = e->u.eVariable.type;
+    // if there is an index, node's type <- array's elements' type (if of course entry is an array)
     else {
       if (e->u.eVariable.type->kind != TYPE_ARRAY && e->u.eVariable.type->kind != TYPE_IARRAY)
         error("indexed identifier is not an array");
@@ -40,9 +52,12 @@ void ASTId::sem() {
     }
     break;
 
+    // if entry is a parameter:
     case ENTRY_PARAMETER:
+    // if there is no index, node's type <- parameter's type
     if (left == NULL)
       type = e->u.eParameter.type;
+    // if there is an index, node's type <- array's elements' type (if of course entry is an array)
     else {
       if (e->u.eParameter.type->kind != TYPE_ARRAY && e->u.eParameter.type->kind != TYPE_IARRAY)
         error("indexed identifier is not an array");
@@ -50,7 +65,9 @@ void ASTId::sem() {
     }
     break;
 
+    // if entry is a function:
     case ENTRY_FUNCTION:
+    // node's type <- function's type
     type = e->u.eFunction.resultType;
     break;
 
@@ -62,60 +79,68 @@ void ASTId::sem() {
   return;
 }
 
+// semantic analysis of ASTInt Node
 void ASTInt::sem() {
 	linecount = line;
   type = typeInteger;
   return;
 }
 
+// semantic analysis of ASTChar Node
 void ASTChar::sem() {
 	linecount = line;
   type = typeChar;
   return;
 }
 
+// semantic analysis of ASTString Node
 void ASTString::sem() {
 	linecount = line;
   type = typeArray(id.length(), typeChar);
   return;
 }
 
+// semantic analysis of ASTVdef Node
 void ASTVdef::sem() {
 	linecount = line;
   if (type->kind == TYPE_ARRAY && type->size <= 0)
     error("illegal size of array in variable definition");
-  newVariable(id.c_str(), type);
+  newVariable(id.c_str(), type);							// create new variable
   return;
 }
 
+// semantic analysis of ASTFdef Node
 void ASTFdef::sem() {
 	linecount = line;
-  left->sem();
-  if (right) right->sem();
-  closeScope();
-  funcList.pop();
-  if (funcList.empty()) currFunction = NULL;
+  left->sem();																// semantic analysis of Fdecl
+  if (right) right->sem();										// semantic analysis of function body (compound statement) if any
+  closeScope();																// close function scope (after body)
+  funcList.pop();															// pop from funcList
+  if (funcList.empty()) currFunction = NULL;	// update currFunction
   else currFunction = funcList.top();
   return;
 }
 
+// semantic analysis of ASTFdecl Node
 void ASTFdecl::sem() {
 	linecount = line;
-  currFunction = newFunction(id.c_str());
-  openScope();
-  funcList.push(currFunction);
+  currFunction = newFunction(id.c_str());			// make this currFunction
+  openScope();																// open function scope (before parameter and local def semantic analysis)
+  funcList.push(currFunction);								// push into funcList
   // in case of error in function declaration:
   if (!currFunction)
     return;
-  if (left) left->sem();
+  if (left) left->sem();											// semantic analysis of parameters (if any)
   endFunctionHeader(currFunction, type);
-  if (right) right->sem();
+  if (right) right->sem();										// semantic analysis of local definitions (if any)
   num_vars = currentScope->negOffset;
   return;
 }
 
+// semantic analysis of ASTPar Node
 void ASTPar::sem() {
 	linecount = line;
+	// create new parameter after checking passmode)
   if (pm == PASS_BY_VALUE) {
     if (type->kind == TYPE_ARRAY || type->kind == TYPE_IARRAY)
       error("an array can not be passed by value as a parameter to a function");
@@ -126,12 +151,13 @@ void ASTPar::sem() {
   return;
 }
 
+// semantic analysis of ASTAssign Node
 void ASTAssign::sem() {
 	linecount = line;
-  left->sem();
+  left->sem();																// semantic analysis of l-value
   if (left->type->kind == TYPE_ARRAY || left->type->kind == TYPE_IARRAY)
     error("left side of assignment can not be an array");
-  right->sem();
+  right->sem();																// semantic analysis of expression
   SymbolEntry * e = lookupEntry(left->id.c_str(), LOOKUP_ALL_SCOPES, false);
   if (!e)
     return;
@@ -142,18 +168,19 @@ void ASTAssign::sem() {
   return;
 }
 
+// semantic analysis of ASTFcall Node
 void ASTFcall::sem() {
 	linecount = line;
-  SymbolEntry * f = lookup(id);
+  SymbolEntry * f = lookup(id);								// lookup function
   if (!f)
     return;
   if (f->entryType != ENTRY_FUNCTION)
     error("%s is not a function", id);
-  type = f->u.eFunction.resultType;
-  if (left) left->sem();
+  type = f->u.eFunction.resultType;						// node's type <- function's type
+  if (left) left->sem();											// semantic analysis of parameter list
 
-  ASTNode *currPar = left;
-  SymbolEntry *expectedPar = f->u.eFunction.firstArgument;
+  ASTNode *currPar = left;																	// currPar <- 1st given parameter
+  SymbolEntry *expectedPar = f->u.eFunction.firstArgument;	// expectedPar <- 1st expected parameter
 
   while (currPar) {
     if (!expectedPar) {
@@ -164,8 +191,9 @@ void ASTFcall::sem() {
     Type expectedParType = expectedPar->u.eParameter.type;
     Type currParType = currPar->left->type;
 
+    // expected parameter passed by reference:
     if (expectedPar->u.eParameter.mode == PASS_BY_REFERENCE) {
-    // if actual parameter:
+    // error if actual parameter:
     // --> has no id
       if (currPar->left->id.empty()) {
         error("parameters passed by reference must be l-values");
@@ -179,6 +207,7 @@ void ASTFcall::sem() {
       }
     }
 
+    // expected parameter is array:
     if (expectedParType->kind == TYPE_IARRAY) {
       if ((currParType->kind != TYPE_ARRAY) && (currParType->kind != TYPE_IARRAY))
         error("function parameter expected to be an array");
@@ -189,8 +218,9 @@ void ASTFcall::sem() {
       if (!equalType(expectedParType, currParType))
         error("function parameter type mismatch");
     }
-    currPar = currPar->right;
-    expectedPar = expectedPar->u.eParameter.next;
+
+    currPar = currPar->right;																// next given parameter
+    expectedPar = expectedPar->u.eParameter.next;						// next expected parameter
   }
 
   if (expectedPar)
@@ -198,9 +228,10 @@ void ASTFcall::sem() {
   return;
 }
 
+// semantic analysis of ASTFcall_stmt Node
 void ASTFcall_stmt::sem() {
 	linecount = line;
-  left->sem();
+  left->sem();																// semantic analysis of function call
   SymbolEntry * f = lookupEntry(left->id.c_str(), LOOKUP_ALL_SCOPES, false);
   if (!f)
     return;
@@ -209,56 +240,62 @@ void ASTFcall_stmt::sem() {
   return;
 }
 
+// semantic analysis of ASTIf Node
 void ASTIf::sem() {
 	linecount = line;
-  left->sem();
+  left->sem();																// semantic analysis of condition
   if (!equalType(left->type, typeBoolean))
     error("if expects a boolean condition");
-  if (right) right->sem();
+  if (right) right->sem();										// semantic analysis of (if) compound statement, if any
   return;
 }
 
+// semantic analysis of ASTIfelse Node
 void ASTIfelse::sem() {
 	linecount = line;
   left->sem();
-  if (right) right->sem();
+  if (right) right->sem();										// semantic analysis of (else) compound statement, if any
   return;
 }
 
+// semantic analysis of ASTWhile Node
 void ASTWhile::sem() {
 	linecount = line;
-  left->sem();
+  left->sem();																// semantic analysis of condition
   if (!equalType(left->type, typeBoolean))
     error("while loop expects a boolean condition");
-  if (right) right->sem();
+  if (right) right->sem();										// semantic analysis of compound statement (if any)
   return;
 }
 
+// semantic analysis of ASTRet Node
 void ASTRet::sem() {
 	linecount = line;
-  if (!currFunction)  // no current function? what?
+  if (!currFunction)													// no current function? what?
     internal("return expression used outside of function body");
-  else if (left) {    // if we have the form "return e", check e and function result type
-    left->sem();
+  else if (left) {    												// if we have the form "return e", check e and function result type
+    left->sem();															// semantic analysis of returned expression
     if (!equalType(currFunction->u.eFunction.resultType, left->type))
       error("result type of function and return value mismatch");
   }
-  else if (currFunction->u.eFunction.resultType->kind != TYPE_VOID)   // if we have the form "return" and fun is not proc
+  else if (currFunction->u.eFunction.resultType->kind != TYPE_VOID)
     error("function defined as proc can not return anything");
   return;
 }
 
+// semantic analysis of ASTSeq Node
 void ASTSeq::sem() {
 	linecount = line;
-  if (left) left->sem();
-  if (right) right->sem();
+  if (left) left->sem();											// semantic analysis of 1st node
+  if (right) right->sem();										// semantic analysis of the rest of seq
   return;
 }
 
+// semantic analysis of ASTOp Node
 void ASTOp::sem() {
 	linecount = line;
-  left->sem();
-  right->sem();
+  left->sem();																// semantic analysis of left expression
+  right->sem();																// semantic analysis of right expression
   switch (op) {
     case PLUS:
     if (left == NULL) {

@@ -1,0 +1,5 @@
+chars () : proc 
+    c : byte;
+{
+    c = '\xFF';
+}

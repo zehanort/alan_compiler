@@ -1,0 +1,16 @@
+main () : proc
+    line : byte[80];
+    frame : byte[10];
+    x : int;
+    {
+        x = readInteger();
+        writeInteger(x);
+        readString(80, line);
+        writeString(line);
+        -- readString(80, line);
+        -- writeString(line);
+        -- readString(80, line);
+        -- writeString(line);
+        -- readString(80, line);
+        -- writeString(line);
+    }   -- main body

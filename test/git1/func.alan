@@ -1,0 +1,14 @@
+solve () : proc
+    y: int;
+
+    toUse (n : reference int) : int
+
+    { -- toUse
+        return 42;
+    }
+
+{
+    y = 1;
+    if (toUse(y) == 42) { return;}
+    -- return ;      -- NOTE THAT IT WORKS WHETHER OR NOT WE HAVE
+}    -- THIS SECOND RETURN (as in mpampaspyrou examples)

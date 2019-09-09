@@ -132,6 +132,8 @@ if args.dump_IR:
 final_compile_cmd = [final_compiler, *final_compiler_flags]
 if args.optimize:
     final_compile_cmd.append('-O3')
+else:
+    final_compile_cmd.append('-O0')
 
 final_compile = sp.run(
     final_compile_cmd,
@@ -148,6 +150,8 @@ if args.store_IR_and_final or args.dump_final:
     final_compile_cmd = [final_compiler]
     if args.optimize:
         final_compile_cmd.append('-O3')
+    else:
+        final_compile_cmd.append('-O0')
 
 if args.store_IR_and_final:
     with open(join(basedir, progname + '.asm'), 'w') as f:

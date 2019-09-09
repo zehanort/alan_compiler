@@ -1,13 +1,13 @@
-/**************************************************
- * C implementation of ALAN std library functions *
-***************************************************/
+/* ---------------------------------------------------------------------
+   ---------- C implementation of ALAN std library functions -----------
+   --------------------------------------------------------------------- */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <inttypes.h>
 
-/*** write functions ***/
+// write functions
 void writeInteger(int32_t n) {
     printf("%" PRId32, n);
 }
@@ -24,7 +24,7 @@ void writeString(uint8_t *s) {
     printf("%s", s);
 }
 
-/*** read functions ***/
+// read functions
 int32_t readInteger() {
     int32_t n;
     if (!scanf(" %" SCNd32, &n)) {
@@ -68,7 +68,7 @@ void readString(int32_t n, uint8_t *s) {
     return;
 }
 
-/*** type casting functions ***/
+// type casting functions
 int32_t extend(uint8_t b) {
     return (int32_t)b;
 }
@@ -77,7 +77,7 @@ uint8_t shrink(int32_t i) {
     return (uint8_t)(i & 0xFF);
 }
 
-/*** string manipulation functions ***/
+// string manipulation functions
 int32_t strlen(uint8_t *s) {
     int32_t len = 0;
     while (*s++ != '\0') len++;

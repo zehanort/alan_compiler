@@ -1,0 +1,7 @@
+hello() : proc
+{
+  writeString("abc");
+  writeString("Route 66");
+  writeString("Hello world!\n");
+  writeString("Name:\t\"Douglas Adams\"\nValue:\t42\n");
+}

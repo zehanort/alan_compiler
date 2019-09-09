@@ -1,0 +1,12 @@
+main () : proc
+{
+    (* 
+        This is a comment 
+        (* 
+            Inside another comment 
+            (*
+                INCEPTION
+            *)
+        *)
+    *)
+}

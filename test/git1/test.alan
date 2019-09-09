@@ -1,0 +1,13 @@
+main () : proc
+
+    change (n : int) : int
+    {
+        return n * 2;
+    }
+
+    n : int;
+
+{
+    n = 5;
+    n = change(n);
+}

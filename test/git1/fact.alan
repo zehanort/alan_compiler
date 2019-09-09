@@ -1,0 +1,17 @@
+fact() : proc
+
+    fact(n : int) : int
+    {
+        if (n == 0) return 1;
+        else return n * fact(n - 1);
+    }
+
+    z : int;
+
+{
+    z = fact(7);
+    if (z == 5040) writeString("42\n");
+    else {
+        writeInteger(z); writeString(" wrong\n");
+    }
+}

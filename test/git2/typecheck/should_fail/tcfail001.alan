@@ -1,0 +1,11 @@
+sign() : proc
+  foo : int;
+  char : byte;
+{
+  foo = +42;
+  foo = -42;
+  char = 'a';
+  char = +'a';
+  char = -'a';
+  foo = -('a' + 3);
+}

@@ -16,9 +16,10 @@ typedef enum {
   STRING, INTEGER                       // needed for codegen :(
 } kind;
 
-/***************************
- * Abstract AST Node Class *
- ***************************/
+/* ---------------------------------------------------------------------
+   ---------------------- Abstract AST Node Class ----------------------
+   --------------------------------------------------------------------- */
+
 class ASTNode {
 
 public:
@@ -61,9 +62,10 @@ public:
   };
 };
 
-/************************************************************
- * AST Node Classes used in the AST representation of input *
- ************************************************************/
+/* ---------------------------------------------------------------------
+   ------ AST Node Classes used in the AST representation of input -----
+   --------------------------------------------------------------------- */
+
 class ASTId : public ASTNode {
 public:
   ASTId(string id, ASTNode *index) : ASTNode(id, index) {};
