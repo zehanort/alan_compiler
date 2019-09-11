@@ -110,8 +110,10 @@ void codegen(ASTNode *t) {
   // step 5: create a call to the main function
   llvm::Function *F = logger.getFunctionInScope(t->left->id);
   Builder.SetInsertPoint(MainBB);
-  Builder.CreateCall(F, vector<llvm::Value*>{});
-  Builder.CreateRet(c32(0));
+  if (F->getReturnType()->isVoidTy())
+    Builder.CreateRet(c32(0));
+  else
+    Builder.CreateRet(Builder.CreateCall(F, vector<llvm::Value*>{}));
   logger.closeScope();
 
   // emit LLVM IR to stdout
