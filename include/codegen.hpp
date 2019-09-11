@@ -129,7 +129,7 @@ public:
     };
 
     // called when a return instruction is found
-    void addReturn(string function) {
+    void addReturn() {
         this->scopeLogs.back().wildRet = true;
     };
 

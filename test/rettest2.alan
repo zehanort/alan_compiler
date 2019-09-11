@@ -1,0 +1,5 @@
+rettest(): proc {
+	return;
+	writeInteger(10);
+	return;
+}
