@@ -223,7 +223,7 @@ llvm::Value * ASTFdef::codegen() {
   	this->right->codegen();
 
   // step 6: check for return
-  if (!logger.returnAddedInScopeFunction(F->getName().str())) {
+  if (!logger.wildRetExists()) {
   	retType = F->getReturnType();
     if (retType->isIntegerTy(32)) Builder.CreateRet(c32(0));
     else if (retType->isIntegerTy(8)) Builder.CreateRet(c8(0));

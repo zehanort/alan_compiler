@@ -56,14 +56,12 @@ void codegen(ASTNode *t);
    > variableTyoes:     types of all variables
    > variableAllocas:   addresses of the stack slots of all variables
    > functions:         all functions
-   > returnAdded:       is there a return instruction in the function?
  ----------------------------------------------------------------------- */
 
 typedef struct {
     unordered_map<string, llvm::Type*> variableTypes;
     unordered_map<string, llvm::AllocaInst*> variableAllocas;
     unordered_map<string, llvm::Function*> functions;
-    unordered_map<string, bool> returnAdded;
     bool wildRet = false;
 } scopeLog;
 
@@ -132,13 +130,7 @@ public:
 
     // called when a return instruction is found
     void addReturn(string function) {
-        this->scopeLogs.back().returnAdded[function] = true;
         this->scopeLogs.back().wildRet = true;
-    };
-
-    // returns true if there is a return instruction in the function body
-    bool returnAddedInScopeFunction(string function) {
-        return this->scopeLogs.back().returnAdded[function];
     };
 
     // for returns in if-ifelse statements
