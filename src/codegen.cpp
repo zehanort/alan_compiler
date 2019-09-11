@@ -370,6 +370,7 @@ llvm::Value * ASTWhile::codegen() {
 
 // codegen() method of ASTRet nodes
 llvm::Value * ASTRet::codegen() {
+  if (logger.wildRetExists()) return nullptr;
   logger.addReturn(Builder.GetInsertBlock()->getParent()->getName().str());
   if (this->left == nullptr) return Builder.CreateRetVoid();
   return Builder.CreateRet(this->left->codegen());
