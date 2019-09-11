@@ -222,13 +222,11 @@ llvm::Value * ASTFdef::codegen() {
   if (this->right != nullptr)
   	this->right->codegen();
 
-  // step 6: check if return was omitted
-  if (!logger.returnAddedInScopeFunction(Fname)) {
-  	auto *retType = F->getReturnType();
-    if (retType->isIntegerTy(32)) Builder.CreateRet(c32(0));
-    else if (retType->isIntegerTy(8)) Builder.CreateRet(c8(0));
-    else Builder.CreateRetVoid();
-  }
+  // step 6: ALWAYS add a (possibly redundant, but ok) return
+	retType = F->getReturnType();
+  if (retType->isIntegerTy(32)) Builder.CreateRet(c32(0));
+  else if (retType->isIntegerTy(8)) Builder.CreateRet(c8(0));
+  else Builder.CreateRetVoid();
 
   // step 7: verify, done
   llvm::verifyFunction(*F);
