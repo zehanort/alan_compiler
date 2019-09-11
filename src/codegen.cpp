@@ -222,11 +222,13 @@ llvm::Value * ASTFdef::codegen() {
   if (this->right != nullptr)
   	this->right->codegen();
 
-  // step 6: ALWAYS add a (possibly redundant, but ok) return
-	retType = F->getReturnType();
-  if (retType->isIntegerTy(32)) Builder.CreateRet(c32(0));
-  else if (retType->isIntegerTy(8)) Builder.CreateRet(c8(0));
-  else Builder.CreateRetVoid();
+  // step 6: check for return
+  if (!logger.returnAddedInScopeFunction(F->getName().str())) {
+  	retType = F->getReturnType();
+    if (retType->isIntegerTy(32)) Builder.CreateRet(c32(0));
+    else if (retType->isIntegerTy(8)) Builder.CreateRet(c8(0));
+    else Builder.CreateRetVoid();
+  }
 
   // step 7: verify, done
   llvm::verifyFunction(*F);
@@ -404,8 +406,8 @@ llvm::Value * ASTOp::codegen() {
     case AND:    return Builder.CreateAnd(l, r, "andtmp");
     case OR:     return Builder.CreateOr(l, r, "ortmp");
     case NOT:    return Builder.CreateNot(r, "nottmp");
-    case TRUE_:  return Builder.CreateICmpEQ(llvm::ConstantInt::get(i32, 0), c32(0));
-    case FALSE_: return Builder.CreateICmpEQ(llvm::ConstantInt::get(i32, 1), c32(0));
+    case TRUE_:  return Builder.CreateICmpEQ(c32(0), c32(0), "true");
+    case FALSE_: return Builder.CreateICmpEQ(c32(0), c32(1), "false");
     default:		 internal("unknown operation to codegen");
   }
   return nullptr;

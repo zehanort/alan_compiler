@@ -19,3 +19,5 @@ echo "programs that did not compile:"
 for i in "${not_working[@]}"; do
    echo "$i"
 done
+
+rm a.out
