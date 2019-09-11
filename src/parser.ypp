@@ -79,43 +79,43 @@ func-def:
 ;
 
 fpar-list:
-	/* nothing */ { $$ = NULL; }
-|	fpar-def { $$ = new ASTSeq($1, NULL); }
+	/* nothing */          { $$ = NULL; }
+|	fpar-def               { $$ = new ASTSeq($1, NULL); }
 |	fpar-def ',' fpar-list { $$ = new ASTSeq($1, $3); }
 ;
 
 fpar-def:
-	T_id ':' type { $$ = new ASTPar($1, $3, PASS_BY_VALUE); }
+	T_id ':' type             { $$ = new ASTPar($1, $3, PASS_BY_VALUE); }
 |	T_id ':' "reference" type { $$ = new ASTPar($1, $4, PASS_BY_REFERENCE); }
 ;
 
 local-def-list:
-	/* nothing */ { $$ = NULL; }
+	/* nothing */            { $$ = NULL; }
 |	local-def local-def-list { $$ = new ASTSeq($1, $2); }
 ;
 
 local-def:
 	func-def { $$ = $1; }
-|	var-def { $$ = $1; }
+|	var-def  { $$ = $1; }
 ;
 
 type:
-	data-type { $$ = $1; }
+	data-type         { $$ = $1; }
 |	data-type '[' ']' { $$ = typeIArray($1); }
 ;
 
 data-type:
-	"int" { $$ = typeInteger; }
+	"int"  { $$ = typeInteger; }
 |	"byte" { $$ = typeChar; }
 ;
 
 r-type:
 	data-type { $$ = $1; }
-|	"proc" { $$ = typeVoid; }
+|	"proc"    { $$ = typeVoid; }
 ;
 
 var-def:
-	T_id ':' data-type ';' { $$ = new ASTVdef($1, $3, 0); }
+	T_id ':' data-type ';'                 { $$ = new ASTVdef($1, $3, 0); }
 |	T_id ':' data-type '[' T_const ']' ';' { $$ = new ASTVdef($1, $3, $5); }
 ;
 
@@ -124,20 +124,20 @@ compound-stmt:
 ;
 
 stmt-list:
-	/* nothing */ { $$ = new ASTSeq(NULL, NULL); }
+	/* nothing */  { $$ = new ASTSeq(NULL, NULL); }
 |	stmt stmt-list { $$ = new ASTSeq($1, $2); }
 ;
 
 stmt:
-	';' { $$ = NULL; }
-|	l-value '=' expr ';' { $$ = new ASTAssign($1, $3); }
-|	compound-stmt { $$ = $1; }
-|	func-call ';' { $$ = new ASTFcall_stmt($1); }
-|	"if" '(' cond ')' stmt { $$ = new ASTIf($3, $5); }
+	';'                                { $$ = NULL; }
+|	l-value '=' expr ';'               { $$ = new ASTAssign($1, $3); }
+|	compound-stmt                      { $$ = $1; }
+|	func-call ';'                      { $$ = new ASTFcall_stmt($1); }
+|	"if" '(' cond ')' stmt             { $$ = new ASTIf($3, $5); }
 |	"if" '(' cond ')' stmt "else" stmt { $$ = new ASTIfelse(new ASTIf($3, $5), $7); }
-|	"while" '(' cond ')' stmt { $$ = new ASTWhile($3, $5); }
-|	"return" ';' { $$ = new ASTRet(NULL); }
-|	"return" expr ';' { $$ = new ASTRet($2); }
+|	"while" '(' cond ')' stmt          { $$ = new ASTWhile($3, $5); }
+|	"return" ';'                       { $$ = new ASTRet(NULL); }
+|	"return" expr ';'                  { $$ = new ASTRet($2); }
 ;
 
 func-call:
@@ -145,45 +145,45 @@ func-call:
 ;
 
 expr-list:
-	/* nothing */ { $$ = NULL; }
-|	expr { $$ = new ASTSeq($1, NULL); }
+	/* nothing */      { $$ = NULL; }
+|	expr               { $$ = new ASTSeq($1, NULL); }
 |	expr ',' expr-list { $$ = new ASTSeq($1, $3); }
 ;
 
 expr:
-	T_const { $$ = new ASTInt($1); }
-|	T_char { $$ = new ASTChar($1); }
-|	l-value { $$ = $1; }
-|	'(' expr ')' { $$ = $2; }
-|	func-call { $$ = $1; }
+	T_const       { $$ = new ASTInt($1); }
+|	T_char        { $$ = new ASTChar($1); }
+|	l-value       { $$ = $1; }
+|	'(' expr ')'  { $$ = $2; }
+|	func-call     { $$ = $1; }
 |	expr '+' expr { $$ = new ASTOp($1, PLUS, $3); }
 |	expr '-' expr { $$ = new ASTOp($1, MINUS, $3); }
 |	expr '*' expr { $$ = new ASTOp($1, TIMES, $3); }
 |	expr '/' expr { $$ = new ASTOp($1, DIV, $3); }
 |	expr '%' expr { $$ = new ASTOp($1, MOD, $3); }
-|	'+' expr { $$ = new ASTOp(new ASTInt(0), PLUS, $2); }		%prec UPLUS
-|	'-' expr { $$ = new ASTOp(new ASTInt(0), MINUS, $2); }	%prec UMINUS
+|	'+' expr      { $$ = new ASTOp(new ASTInt(0), PLUS, $2); }  %prec UPLUS
+|	'-' expr      { $$ = new ASTOp(new ASTInt(0), MINUS, $2); } %prec UMINUS
 ;
 
 l-value:
-	T_id { $$ = new ASTId($1, NULL); }
+	T_id              { $$ = new ASTId($1, NULL); }
 |	T_id '[' expr ']' { $$ = new ASTId($1, $3); }
-|	T_string { $$ = new ASTString($1); }
+|	T_string          { $$ = new ASTString($1); }
 ;
 
 cond:
-	"true" { $$ = new ASTInt(1); }
-|	"false" { $$ = new ASTInt(0); }
-|	'(' cond ')' { $$ = $2; }
-|	'!' cond { $$ = new ASTOp(NULL, NOT, $2); }
-|	expr "==" expr { $$ = new ASTOp($1, EQ, $3); }
-|	expr "!=" expr { $$ = new ASTOp($1, NE, $3); }
-|	expr '<' expr { $$ = new ASTOp($1, LT, $3); }
-|	expr '>' expr { $$ = new ASTOp($1, GT, $3); }
-|	expr "<=" expr { $$ = new ASTOp($1, LE, $3); }
-|	expr ">=" expr { $$ = new ASTOp($1, GE, $3); }
-|	cond '&' cond { $$ = new ASTOp($1, AND, $3); }
-|	cond '|' cond { $$ = new ASTOp($1, OR, $3); }
+	"true"          { $$ = new ASTOp(NULL, TRUE_, NULL); }
+|	"false"         { $$ = new ASTOp(NULL, FALSE_, NULL); }
+|	'(' cond ')'    { $$ = $2; }
+|	'!' cond        { $$ = new ASTOp(NULL, NOT, $2); }
+|	expr "==" expr  { $$ = new ASTOp($1, EQ, $3); }
+|	expr "!=" expr  { $$ = new ASTOp($1, NE, $3); }
+|	expr '<' expr   { $$ = new ASTOp($1, LT, $3); }
+|	expr '>' expr   { $$ = new ASTOp($1, GT, $3); }
+|	expr "<=" expr  { $$ = new ASTOp($1, LE, $3); }
+|	expr ">=" expr  { $$ = new ASTOp($1, GE, $3); }
+|	cond '&' cond   { $$ = new ASTOp($1, AND, $3); }
+|	cond '|' cond   { $$ = new ASTOp($1, OR, $3); }
 ;
 
 %%

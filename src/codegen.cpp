@@ -384,25 +384,30 @@ llvm::Value * ASTSeq::codegen() {
 
 // codegen() method of ASTOp nodes
 llvm::Value * ASTOp::codegen() {
-  llvm::Value *l = this->left->codegen();
-  llvm::Value *r = nullptr;
-  if (this->op != NOT) r = this->right->codegen();
+  llvm::Value *l, *r;
+  if (this->op != TRUE_ && this->op != FALSE_) {
+    if (this->op != NOT) l = this->left->codegen();
+    else l = nullptr;
+    r = this->right->codegen();
+  }
   switch (this->op) {
-    case PLUS:  return Builder.CreateAdd(l, r, "addtmp");
-    case MINUS: return Builder.CreateSub(l, r, "subtmp");
-    case TIMES: return Builder.CreateMul(l, r, "multmp");
-    case DIV:   return Builder.CreateSDiv(l, r, "divtmp");
-    case MOD:   return Builder.CreateSRem(l, r, "modtmp");
-    case EQ:    return Builder.CreateICmpEQ(l, r, "eqtmp");
-    case NE:    return Builder.CreateICmpNE(l, r, "neqtmp");
-    case LT:    return Builder.CreateICmpSLT(l, r, "lttmp");
-    case LE:    return Builder.CreateICmpSLE(l, r, "letmp");
-    case GT:    return Builder.CreateICmpSGT(l, r, "gttmp");
-    case GE:    return Builder.CreateICmpSGE(l, r, "getmp");
-    case AND:   return Builder.CreateAnd(l, r, "andtmp");
-    case OR:    return Builder.CreateOr(l, r, "ortmp");
-    case NOT:   return Builder.CreateNot(l, "nottmp");
-    default:		internal("unknown operation to codegen");
+    case PLUS:   return Builder.CreateAdd(l, r, "addtmp");
+    case MINUS:  return Builder.CreateSub(l, r, "subtmp");
+    case TIMES:  return Builder.CreateMul(l, r, "multmp");
+    case DIV:    return Builder.CreateSDiv(l, r, "divtmp");
+    case MOD:    return Builder.CreateSRem(l, r, "modtmp");
+    case EQ:     return Builder.CreateICmpEQ(l, r, "eqtmp");
+    case NE:     return Builder.CreateICmpNE(l, r, "neqtmp");
+    case LT:     return Builder.CreateICmpSLT(l, r, "lttmp");
+    case LE:     return Builder.CreateICmpSLE(l, r, "letmp");
+    case GT:     return Builder.CreateICmpSGT(l, r, "gttmp");
+    case GE:     return Builder.CreateICmpSGE(l, r, "getmp");
+    case AND:    return Builder.CreateAnd(l, r, "andtmp");
+    case OR:     return Builder.CreateOr(l, r, "ortmp");
+    case NOT:    return Builder.CreateNot(r, "nottmp");
+    case TRUE_:  return Builder.CreateICmpEQ(llvm::ConstantInt::get(i32, 0), c32(0));
+    case FALSE_: return Builder.CreateICmpEQ(llvm::ConstantInt::get(i32, 1), c32(0));
+    default:		 internal("unknown operation to codegen");
   }
   return nullptr;
 }

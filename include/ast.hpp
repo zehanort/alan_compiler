@@ -12,6 +12,7 @@ using namespace std;
 
 typedef enum {
   EQ, NE, LE, GE, LT, GT, AND, OR, NOT, // condition operators
+  TRUE_, FALSE_,                        // constant condition operators
   PLUS, MINUS, TIMES, DIV, MOD,         // expression operators
   STRING, INTEGER                       // needed for codegen :(
 } kind;

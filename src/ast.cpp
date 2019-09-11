@@ -294,8 +294,8 @@ void ASTSeq::sem() {
 // semantic analysis of ASTOp Node
 void ASTOp::sem() {
 	linecount = line;
-  left->sem();																// semantic analysis of left expression
-  right->sem();																// semantic analysis of right expression
+  if (left)  left->sem();											// semantic analysis of left expression
+  if (right) right->sem();										// semantic analysis of right expression
   switch (op) {
     case PLUS:
     if (left == NULL) {
@@ -385,6 +385,11 @@ void ASTOp::sem() {
     case NOT:
     if (!equalType(right->type, typeBoolean))
       error("only boolean conditions supported by ! operator");
+    type = typeBoolean;
+    return;
+
+    case TRUE_:
+    case FALSE_:
     type = typeBoolean;
     return;
 
