@@ -62,7 +62,6 @@ typedef struct {
     unordered_map<string, llvm::Type*> variableTypes;
     unordered_map<string, llvm::AllocaInst*> variableAllocas;
     unordered_map<string, llvm::Function*> functions;
-    bool wildRet = false;
 } scopeLog;
 
 
@@ -126,16 +125,6 @@ public:
         // if sem was ok, this point should be unreachable
         internal("Variable \"%s\" not in scope.", id);
         return false;
-    };
-
-    // called when a return instruction is found
-    void addReturn() {
-        this->scopeLogs.back().wildRet = true;
-    };
-
-    // for returns in if-ifelse statements
-    bool wildRetExists() {
-    		return this->scopeLogs.back().wildRet;
     };
 
     // add function to scopelog

@@ -110,10 +110,13 @@ void codegen(ASTNode *t) {
   // step 5: create a call to the main function
   llvm::Function *F = logger.getFunctionInScope(t->left->id);
   Builder.SetInsertPoint(MainBB);
-  if (F->getReturnType()->isVoidTy())
+  // if main function has void type, call it and return 0
+  if (F->getReturnType()->isVoidTy()) {
+    Builder.CreateCall(F, vector<llvm::Value*>{});
     Builder.CreateRet(c32(0));
-  else
-    Builder.CreateRet(Builder.CreateCall(F, vector<llvm::Value*>{}));
+  }
+  // else, call it and return the value it returns
+  else Builder.CreateRet(Builder.CreateCall(F, vector<llvm::Value*>{}));
   logger.closeScope();
 
   // emit LLVM IR to stdout
@@ -225,12 +228,10 @@ llvm::Value * ASTFdef::codegen() {
   	this->right->codegen();
 
   // step 6: check for return
-  if (!logger.wildRetExists()) {
-  	retType = F->getReturnType();
-    if (retType->isIntegerTy(32)) Builder.CreateRet(c32(0));
-    else if (retType->isIntegerTy(8)) Builder.CreateRet(c8(0));
-    else Builder.CreateRetVoid();
-  }
+	retType = F->getReturnType();
+  if (retType->isIntegerTy(32)) Builder.CreateRet(c32(0));
+  else if (retType->isIntegerTy(8)) Builder.CreateRet(c8(0));
+  else Builder.CreateRetVoid();
 
   // step 7: verify, done
   llvm::verifyFunction(*F);
@@ -314,7 +315,7 @@ llvm::Value * ASTIf::codegen() {
   Builder.SetInsertPoint(ThenBB);
   logger.openScope();
   this->right->codegen();
-  if (!logger.wildRetExists()) Builder.CreateBr(MergeBB);
+  Builder.CreateBr(MergeBB);
   logger.closeScope();
 
   // change Insert Point
@@ -335,14 +336,14 @@ llvm::Value * ASTIfelse::codegen() {
   Builder.SetInsertPoint(ThenBB);
   logger.openScope();
   this->left->right->codegen();
-  if (!logger.wildRetExists()) Builder.CreateBr(MergeBB);
+  Builder.CreateBr(MergeBB);
   logger.closeScope();
   
   // emit else block
   Builder.SetInsertPoint(ElseBB);
   logger.openScope();
   this->right->codegen();
-  if (!logger.wildRetExists()) Builder.CreateBr(MergeBB);
+  Builder.CreateBr(MergeBB);
   logger.closeScope();
 
   // change Insert Point
@@ -372,10 +373,12 @@ llvm::Value * ASTWhile::codegen() {
 
 // codegen() method of ASTRet nodes
 llvm::Value * ASTRet::codegen() {
-  if (logger.wildRetExists()) return nullptr;
-  logger.addReturn();
-  if (this->left == nullptr) return Builder.CreateRetVoid();
-  return Builder.CreateRet(this->left->codegen());
+  llvm::ReturnInst * ret;
+  if (this->left == nullptr) ret = Builder.CreateRetVoid();
+  else ret = Builder.CreateRet(this->left->codegen());
+  llvm::BasicBlock *AfterRetBB = llvm::BasicBlock::Create(TheContext, "after_ret", Builder.GetInsertBlock()->getParent());
+  Builder.SetInsertPoint(AfterRetBB);
+  return ret;
 }
 
 // codegen() method of ASTSeq nodes
