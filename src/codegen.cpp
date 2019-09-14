@@ -376,8 +376,9 @@ llvm::Value * ASTRet::codegen() {
   llvm::ReturnInst * ret;
   if (this->left == nullptr) ret = Builder.CreateRetVoid();
   else ret = Builder.CreateRet(this->left->codegen());
-  llvm::BasicBlock *AfterRetBB = llvm::BasicBlock::Create(TheContext, "after_ret", Builder.GetInsertBlock()->getParent());
-  Builder.SetInsertPoint(AfterRetBB);
+  Builder.SetInsertPoint(
+    llvm::BasicBlock::Create(TheContext, "after_ret", Builder.GetInsertBlock()->getParent())
+  );
   return ret;
 }
 
