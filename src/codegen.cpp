@@ -92,7 +92,7 @@ void createstdlib();
 // this is the main codegen function (called by main())
 void codegen(ASTNode *t) {
   // step 1: initiate the module
-  TheModule = std::make_unique<llvm::Module>(filename, TheContext);
+  TheModule = llvm::make_unique<llvm::Module>(filename, TheContext);
   logger.openScope();
 
   // step 2: create alan stdlib functions
