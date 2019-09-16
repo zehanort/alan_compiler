@@ -392,6 +392,47 @@ llvm::Value * ASTSeq::codegen() {
 // codegen() method of ASTOp nodes
 llvm::Value * ASTOp::codegen() {
   llvm::Value *l, *r;
+
+  // short-circuit evaluation of or / and
+  if (this->op == OR || this->op == AND) {
+    llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
+    // basic block where the right expression is evaluated (if necessary)
+    llvm::BasicBlock *RightEvalBB = llvm::BasicBlock::Create(TheContext, "righteval", TheFunction);
+    // basic block that follows evaluation
+    llvm::BasicBlock *AfterBB  = llvm::BasicBlock::Create(TheContext, "after", TheFunction);
+    // current basic block
+    llvm::BasicBlock *CurrBB = Builder.GetInsertBlock();
+
+    // evaluate left side
+    l = this->left->codegen();
+    if (this->op == OR)     // OR: if true jump straight to AfterBB else to RightEvalBB
+      Builder.CreateCondBr(l, AfterBB, RightEvalBB);
+    else                    // AND: if false jump straight to AfterBB else to RightEvalBB
+      Builder.CreateCondBr(l, RightEvalBB, AfterBB);
+
+    // evaluate right side and jump to "after"
+    Builder.SetInsertPoint(RightEvalBB);
+    r = this->right->codegen();
+    RightEvalBB = Builder.GetInsertBlock();
+    Builder.CreateBr(AfterBB);
+
+    Builder.SetInsertPoint(AfterBB);
+    llvm::Value *c;
+    if (this->op == OR)
+      c = Builder.CreateICmpEQ(c32(0), c32(0), "true");
+    else
+      c = Builder.CreateICmpEQ(c32(0), c32(1), "false");
+
+    llvm::PHINode *PN = Builder.CreatePHI(llvm::Type::getInt1Ty(TheContext), 2, "res");
+    // if you got here from CurrBB:
+    //    OR: left side is true -> or is true
+    //    AND: left side is false -> and is false
+    PN->llvm::PHINode::addIncoming(c, CurrBB);
+    // if you got here from RightEvalBB, then or / and is whatever r is
+    PN->llvm::PHINode::addIncoming(r, RightEvalBB);   
+    return PN;
+  }
+
   if (this->op != TRUE_ && this->op != FALSE_) {
     if (this->op != NOT) l = this->left->codegen();
     else l = nullptr;
@@ -409,8 +450,6 @@ llvm::Value * ASTOp::codegen() {
     case LE:     return Builder.CreateICmpSLE(l, r, "letmp");
     case GT:     return Builder.CreateICmpSGT(l, r, "gttmp");
     case GE:     return Builder.CreateICmpSGE(l, r, "getmp");
-    case AND:    return Builder.CreateAnd(l, r, "andtmp");
-    case OR:     return Builder.CreateOr(l, r, "ortmp");
     case NOT:    return Builder.CreateNot(r, "nottmp");
     case TRUE_:  return Builder.CreateICmpEQ(c32(0), c32(0), "true");
     case FALSE_: return Builder.CreateICmpEQ(c32(0), c32(1), "false");

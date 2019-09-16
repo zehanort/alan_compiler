@@ -53,7 +53,7 @@ void codegen(ASTNode *t);
 /* ---------------------------------------------------------------------
    ------------------------------- Scopelog ----------------------------
    ---------------------------------------------------------------------
-   > variableTyoes:     types of all variables
+   > variableTypes:     types of all variables
    > variableAllocas:   addresses of the stack slots of all variables
    > functions:         all functions
  ----------------------------------------------------------------------- */
