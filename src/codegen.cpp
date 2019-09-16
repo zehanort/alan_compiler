@@ -314,7 +314,7 @@ llvm::Value * ASTIf::codegen() {
   // emit then block
   Builder.SetInsertPoint(ThenBB);
   logger.openScope();
-  this->right->codegen();
+  if (this->right) this->right->codegen();
   Builder.CreateBr(MergeBB);
   logger.closeScope();
 
@@ -335,14 +335,14 @@ llvm::Value * ASTIfelse::codegen() {
   // emit then block
   Builder.SetInsertPoint(ThenBB);
   logger.openScope();
-  this->left->right->codegen();
+  if (this->left->right) this->left->right->codegen();
   Builder.CreateBr(MergeBB);
   logger.closeScope();
   
   // emit else block
   Builder.SetInsertPoint(ElseBB);
   logger.openScope();
-  this->right->codegen();
+  if (this->right) this->right->codegen();
   Builder.CreateBr(MergeBB);
   logger.closeScope();
 
@@ -365,7 +365,7 @@ llvm::Value * ASTWhile::codegen() {
   Builder.CreateCondBr(CondV, LoopBB, AfterBB);
   // emit Loop block
   Builder.SetInsertPoint(LoopBB);
-  this->right->codegen();
+  if (this->right) this->right->codegen();
   Builder.CreateBr(CondBB);
   Builder.SetInsertPoint(AfterBB);
   return nullptr;
