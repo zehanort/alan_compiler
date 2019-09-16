@@ -199,8 +199,11 @@ int main(int argc, char *argv[]) {
 	initSymbolTable(997);
 	openScope();
 	initLibFunctions();
-	if (t->left->left)
+	// in case main() has any arguements
+	if (t->left->left) {
+		error("program function cannot have arguments");
 		t->left->left = nullptr;
+	}
 	t->sem();
 	closeScope();
 	destroySymbolTable();
