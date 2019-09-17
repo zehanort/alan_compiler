@@ -1,4 +1,5 @@
 #include "codegen.hpp"
+#include <list>
 
 // function that translates symbol table types to llvm types
 llvm::Type * type_to_llvm(Type type, PassMode pm = PASS_BY_VALUE) {
@@ -393,43 +394,76 @@ llvm::Value * ASTSeq::codegen() {
 llvm::Value * ASTOp::codegen() {
   llvm::Value *l, *r;
 
-  // short-circuit evaluation of or / and
-  if (this->op == OR || this->op == AND) {
-    llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
-    // basic block where the right expression is evaluated (if necessary)
-    llvm::BasicBlock *RightEvalBB = llvm::BasicBlock::Create(TheContext, "righteval", TheFunction);
-    // basic block that follows evaluation
-    llvm::BasicBlock *AfterBB  = llvm::BasicBlock::Create(TheContext, "after", TheFunction);
-    // current basic block
-    llvm::BasicBlock *CurrBB = Builder.GetInsertBlock();
+  // short-circuit evaluation of or/and
+  if ((this->op == OR) | (this->op == AND)) {
+  	kind op_kind = this->op;
 
-    // evaluate left side
-    l = this->left->codegen();
-    if (this->op == OR)     // OR: if true jump straight to AfterBB else to RightEvalBB
-      Builder.CreateCondBr(l, AfterBB, RightEvalBB);
-    else                    // AND: if false jump straight to AfterBB else to RightEvalBB
-      Builder.CreateCondBr(l, RightEvalBB, AfterBB);
+  	// return value if first operand(s) is enough for evaluation:
+  	// true for OR, false for AND
+  	llvm::Value *c;
+  	if (this->op == OR)
+  		c = Builder.CreateICmpEQ(c32(0), c32(0), "true");
+    else 
+    	c = Builder.CreateICmpEQ(c32(0), c32(1), "false");
 
-    // evaluate right side and jump to "after"
-    Builder.SetInsertPoint(RightEvalBB);
-    r = this->right->codegen();
-    RightEvalBB = Builder.GetInsertBlock();
-    Builder.CreateBr(AfterBB);
+    // create list of all operands
+  	std::list<ASTNode *> ops;
+  	ASTNode *it = this;
+  	while (it->op == op_kind) {
+  		ops.push_front(it->right);
+  		it = it->left;
+  	}
+  	ops.push_front(it);
 
+    // basic block where evaluation starts
+    llvm::BasicBlock *BeforeBB = Builder.GetInsertBlock();
+    llvm::Function *TheFunction = BeforeBB->getParent();
+    // basic block that follows evaluation (inserted exactly after current block)
+    llvm::BasicBlock *AfterBB  = llvm::BasicBlock::Create(TheContext, "after", TheFunction, BeforeBB->getNextNode());
+
+    // we start with the instructions of the last block (AfterBB)
     Builder.SetInsertPoint(AfterBB);
-    llvm::Value *c;
-    if (this->op == OR)
-      c = Builder.CreateICmpEQ(c32(0), c32(0), "true");
-    else
-      c = Builder.CreateICmpEQ(c32(0), c32(1), "false");
+    llvm::PHINode *PN = Builder.CreatePHI(llvm::Type::getInt1Ty(TheContext), ops.size(), "res");
 
-    llvm::PHINode *PN = Builder.CreatePHI(llvm::Type::getInt1Ty(TheContext), 2, "res");
-    // if you got here from CurrBB:
-    //    OR: left side is true -> or is true
-    //    AND: left side is false -> and is false
-    PN->llvm::PHINode::addIncoming(c, CurrBB);
-    // if you got here from RightEvalBB, then or / and is whatever r is
-    PN->llvm::PHINode::addIncoming(r, RightEvalBB);   
+    llvm::BasicBlock *EvalBB;
+    llvm::BasicBlock *NextBB = AfterBB;
+
+    // then we codegen the evaluations of the operands (in reverse order)
+    while (!ops.empty()) {
+
+    	// create the basic block that includes the nth evaluation, that is placed before NextBB
+    	EvalBB = llvm::BasicBlock::Create(TheContext, "eval", TheFunction, NextBB);
+    	Builder.SetInsertPoint(EvalBB);
+
+    	// codegen operand
+    	r = ops.back()->codegen();
+    	ops.pop_back();
+
+    	// if this is the last evaluation:
+    	if (NextBB == AfterBB) {
+    		Builder.CreateBr(AfterBB);
+    		// if we jump to AfterBB from here (last operand evaluation) -> or/and is whatever r is
+    		PN->llvm::PHINode::addIncoming(r, Builder.GetInsertBlock());
+    	}
+    	// if there are more evaluations left to codegen:
+    	else {
+    		if (this->op == OR)     // OR: if (r == true) jump straight to AfterBB else to NextBB
+    			Builder.CreateCondBr(r, AfterBB, NextBB);
+    		else                    // AND: if (r == false) jump straight to AfterBB else to NextBB
+    			Builder.CreateCondBr(r, NextBB, AfterBB);
+
+    		// if we jump to AfterBB from here -> no more operand evaluations are necessary
+    		PN->llvm::PHINode::addIncoming(c, Builder.GetInsertBlock());
+    	}
+
+    	NextBB = EvalBB;
+    }
+
+    // now that we know the 1st basic block, create branch from BeforeBB to it and return to AfterBB
+    Builder.SetInsertPoint(BeforeBB);
+    Builder.CreateBr(EvalBB);
+    Builder.SetInsertPoint(AfterBB);
+
     return PN;
   }
 
