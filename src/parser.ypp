@@ -202,7 +202,7 @@ int main(int argc, char *argv[]) {
 	// in case main() has any arguements
 	if (t->left->left) {
 		error("program function cannot have arguments");
-		t->left->left = nullptr;
+		delete t->left->left;
 	}
 	t->sem();
 	closeScope();
