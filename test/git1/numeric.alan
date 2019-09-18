@@ -1,5 +1,0 @@
-hello () : proc
-{
-    writeString("5");
-    return ;
-}

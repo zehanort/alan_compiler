@@ -1,6 +1,0 @@
-mul2(): proc {
-	writeString("Give a number and I will multiply it by 2: ");
-	writeInteger(2*readInteger());
-	writeChar('\n');
-	return;
-}

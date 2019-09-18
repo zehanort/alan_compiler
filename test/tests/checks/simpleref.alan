@@ -1,0 +1,13 @@
+main () : proc
+	inc (i : reference int) : proc
+	{
+		i = i + 1;
+	}
+	i : int;
+{
+	writeString("Give a number and I will increment it by 1: ");
+	i = readInteger();
+	inc(i);
+	writeInteger(i);
+	writeChar('\n');
+}

@@ -1,0 +1,11 @@
+main () : proc
+	fact (n : int) : int
+	{
+		if (n == 0) return 1;
+		else return n * fact(n - 1);
+	}
+{
+	writeString("Give integer to calculate factorial: ");
+	writeInteger(fact(readInteger()));
+	writeChar('\n');
+}

@@ -1,0 +1,6 @@
+sret() : proc
+{
+	return;
+	writeString("this shouldn't be printed");
+	return;
+}

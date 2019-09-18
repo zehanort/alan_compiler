@@ -1,0 +1,19 @@
+f1 () : proc
+	x : int;
+	f2 () : proc
+	{
+		x = 1;
+		writeString("(f2) x = ");
+		writeInteger(x);
+		writeString("\n");
+	}
+{
+	x = 0;
+	writeString("(f1) x = ");
+	writeInteger(x);
+	writeString("\n");
+	f2();
+	writeString("(f1) x = ");
+	writeInteger(x);
+	writeString("\n");
+}

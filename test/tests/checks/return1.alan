@@ -1,0 +1,5 @@
+sret() : int
+{
+	return 17;
+	return 42;
+}

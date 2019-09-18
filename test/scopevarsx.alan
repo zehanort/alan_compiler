@@ -1,7 +1,0 @@
-main(): proc
-	x:int;
-	f(): proc {
-		x=1;
-		writeString("hello!\n");
-	}
-{ f(); }

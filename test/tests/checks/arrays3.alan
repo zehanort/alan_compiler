@@ -1,0 +1,24 @@
+-- prints string1 letter by letter, and string2 after each letter
+
+main () : proc
+	t1 : byte[10];
+	t2 : byte[20];
+	f (x : reference byte [], y : reference byte []) : proc
+	i : int;
+	{
+		i = 0;
+		while(i < 9) {
+			writeChar(x[i]);
+			writeChar('\n');
+			writeString(y);
+			writeChar('\n');
+			i = i+1;
+		}
+	}
+{
+	writeString("Give two strings (9 letters each):\n");
+	readString(10,t1);
+	readString(10,t2);
+	f(t1,t2);
+	return;
+}

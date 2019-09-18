@@ -1,8 +1,0 @@
-rettest():int {
-	if (true) {
-		return 12;
-		writeInteger(12);
-	}
-	writeInteger(25);
-	return 0;
-}

@@ -1,0 +1,8 @@
+solve () : proc
+	c : byte;
+{
+	c = '\xFF';
+	writeString("writeByte('xFF') prints ");
+	writeByte(c);
+	writeChar('\n');
+}

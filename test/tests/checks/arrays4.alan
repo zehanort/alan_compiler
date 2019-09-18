@@ -1,0 +1,35 @@
+-- foo(x, y):	increases 1st element of y by x and returns it
+-- solve()  :	calls foo(41, [1,1,1])
+
+solve () : int
+	pin : int [3];
+	foo (x : int, y : reference int []) : int
+	{
+		y[0] = y[0] + x;
+		return y[0];
+	}
+{
+	pin[0] = 1;
+	pin[1] = 1;
+	pin[2] = 1;
+
+	writeString("before: ");
+	writeInteger(pin[0]);
+	writeChar(',');
+	writeInteger(pin[1]);
+	writeChar(',');
+	writeInteger(pin[2]);
+	writeChar('\n');
+
+	writeString("foo returns: ");
+	writeInteger(foo(41, pin));
+	writeChar('\n');
+
+	writeString("after: ");
+	writeInteger(pin[0]);
+	writeChar(',');
+	writeInteger(pin[1]);
+	writeChar(',');
+	writeInteger(pin[2]);
+	writeChar('\n');
+}

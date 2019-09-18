@@ -1,0 +1,11 @@
+sif () : proc
+	x : int;
+{
+	x = readInteger();
+	if (x >= 0)
+		writeChar('P');
+	else
+		writeChar('N');
+	writeChar('\n');
+	return;
+}

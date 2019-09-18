@@ -1,9 +1,0 @@
-test() : proc
-    n : int;
-{
-    n = readInteger();
-    if ( n > 5 ) {
-        writeInteger(n);
-        writeString("\n");
-    }
-}

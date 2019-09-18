@@ -1,0 +1,14 @@
+foo () : proc
+	x : int;
+	abs (x : int) : int
+	{
+		if (x >= 0) return x;
+		else return -x;
+	}
+{
+	x = -7;
+	writeInteger(abs(x)*2 - 1);
+	writeString(", ");
+	writeInteger(abs(-x)*2 + 1);
+	writeChar('\n');
+}

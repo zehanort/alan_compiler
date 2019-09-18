@@ -1,0 +1,13 @@
+sif () : proc
+	n : int;
+	m : int;
+{
+	n = readInteger();
+	m = readInteger();
+	if (n > 5)
+		writeInteger(n);
+	else
+		writeInteger(m);
+	writeChar('\n');
+	return;
+}

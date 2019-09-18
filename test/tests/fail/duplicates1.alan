@@ -1,0 +1,18 @@
+main () : proc
+	x : int;
+	f1 (x : int) : proc
+		f2 (x : int) : proc
+		{
+			writeInteger(x);
+		}
+	{
+		f2(x);
+	}
+	f1 (y : byte) : proc
+	{
+		writeChar(y);
+	}
+{
+	x = 15;
+	f1(x);
+}

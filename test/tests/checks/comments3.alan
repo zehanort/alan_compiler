@@ -1,0 +1,12 @@
+main () : proc
+	(*
+		(*
+			(parenthesis inside comment)
+		*)
+	*)
+	i : int;
+{
+	i = 0;
+	writeInteger(i);
+	writeString("\n");
+}

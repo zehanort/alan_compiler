@@ -1,0 +1,16 @@
+main () : proc
+	str : byte[10];
+	f (x : reference byte[]) : proc
+		i : int;
+	{
+		i = 0;
+		writeChar(x[i]);
+		i = 1;
+		writeChar(x[i]);
+	}
+{
+	writeString("Give a string (up to 9 letters) and I will print the first 2: ");
+	readString(10, str);
+	f(str);
+	writeChar('\n');
+}

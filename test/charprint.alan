@@ -1,7 +1,0 @@
-charprint () : proc
-{
-	writeChar('\t');
-	writeChar('a');
-	writeByte('a');
-	writeChar('\n');
-}

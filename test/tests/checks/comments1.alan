@@ -1,0 +1,8 @@
+-- this is a comment --
+
+solve () : proc
+-- this is a comment
+{ -- solve
+	writeString("Hello!\n");
+	-- this is a comment
+} -- solve

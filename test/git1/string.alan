@@ -1,6 +1,0 @@
-strings () : proc
-    c : byte[20];
-{
-    c = "This is a string\0";
-    c = "This is \"a\"";
-}

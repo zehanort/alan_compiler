@@ -1,0 +1,21 @@
+main () : proc
+	a1 : int;
+	a2 : int;
+	b1 : byte;
+	b2 : byte;
+{
+	a1 = 255;
+	a2 = 4;
+	b1 = '\xFF';
+	b2 = '\x04';
+	writeString("(int)  255 / 4 = ");
+	writeInteger(a1/a2);
+	writeString("\n(int)  255 % 4 = ");
+	writeInteger(a1%a2);
+	writeString("\n(byte) 255 / 4 = ");
+	writeByte(b1/b2);
+	writeString("\n(byte) 255 % 4 = ");
+	writeByte(b1%b2);
+	writeChar('\n');
+	return;
+}

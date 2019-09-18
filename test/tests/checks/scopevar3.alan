@@ -1,0 +1,28 @@
+-- should print 3
+
+main () : proc
+	f () : int
+		x : int;
+		g () : proc
+			y : int;
+			h () : proc
+				z : int;
+			{ --h
+				z = 1;
+				y = 1;
+				x = x + 1;
+			} --h
+		{ --g
+			y = 1;
+			x = x + 1;
+			h();
+		} --g
+	{ --f
+		x = 1;
+		g();
+		return x;
+	} --f
+{
+	writeInteger(f());
+	writeChar('\n');
+}

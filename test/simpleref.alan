@@ -1,6 +1,0 @@
-sr(): proc
-str : byte[10];
-{
-	readString(10, str);
-	writeString(str);
-}

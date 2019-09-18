@@ -1,0 +1,21 @@
+main () : proc
+	a : int;
+	f1 (i : int) : int
+	{
+		writeString("Reached or operand no");
+		writeInteger(i);
+		writeString(", and operand no1.\n");
+		return 0;
+	}
+	f3 (i : int) : int
+	{
+		writeString("Reached or operand no");
+		writeInteger(i);
+		writeString(", and operand no3.\n");
+		return 0;
+	}
+{
+	a = readInteger();
+	if (f1(1) == 0 & a == 1 & f3(1) == 0 | f1(2) == 0 & a == 2 & f3(2) == 0 | f1(3) == 0 & a == 3 & f3(3) == 0)
+		writeString("---> Number is 1 or 2 or 3.\n");
+}

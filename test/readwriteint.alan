@@ -1,6 +1,0 @@
-check() : proc
-{
-	writeString("Give an integer to echo: ");
-	writeInteger(readInteger());
-	writeChar('\n');
-}

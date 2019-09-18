@@ -1,0 +1,9 @@
+sret () : int
+{
+	if (true) {
+		return 12;
+		writeString("this shouldn't be printed (1)");
+	}
+	writeString("this shouldn't be printed (2)");
+	return 0;
+}
