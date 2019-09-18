@@ -97,7 +97,7 @@ int32_t strcmp(uint8_t *s1, uint8_t *s2) {
 void strcpy(uint8_t *trg, uint8_t *src) {
     // NOTE: if trg is not big enough -> undefined behavior
     while (*src != '\0') *trg++ = *src++;
-    *(++trg) = '\0';
+    *trg = '\0';
     return;
 }
 
