@@ -20,9 +20,9 @@ parser.add_argument('-O',
     action='store_true',
     dest='optimize'
 )
-parser.add_argument('-a', '--all',
-    help='emit IR and assembly code in two seperate files (switched off by default)',
-    action='store_true',
+parser.add_argument('-x', '--no-dump',
+    help='do not emit IR and assembly code in two seperate files (switched on by default)',
+    action='store_false',
     dest='store_IR_and_final'
 )
 parser.add_argument('-i',
