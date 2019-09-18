@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <inttypes.h>
 
-// write functions
+/*** write functions ***/
 void writeInteger(int32_t n) {
     printf("%" PRId32, n);
 }
@@ -24,7 +24,7 @@ void writeString(uint8_t *s) {
     printf("%s", s);
 }
 
-// read functions
+/*** read functions ***/
 int32_t readInteger() {
     int32_t n;
     if (!scanf(" %" SCNd32, &n)) {
@@ -53,22 +53,24 @@ uint8_t readChar() {
 }
 
 void readString(int32_t n, uint8_t *s) {
-    scanf(" ");
-    int i;
+    int starts_with_space;
+    starts_with_space = scanf(" ");
+    int i = 0;
     uint8_t c;
-    for (i = 0; i < n; i++) {
+    if (starts_with_space) {
+        *s++ = ' ';
+        i = 1;
+    }
+    for (; i < n; i++) {
         c = (uint8_t)getchar();
-        if (c == '\n' || c == EOF) {
-            *s = '\0';
-            return;
-        }
+        if (c == '\n' || c == EOF) break;
         *s++ = c;
     }
     *s = '\0';
     return;
 }
 
-// type casting functions
+/*** type casting functions ***/
 int32_t extend(uint8_t b) {
     return (int32_t)b;
 }
@@ -77,7 +79,7 @@ uint8_t shrink(int32_t i) {
     return (uint8_t)(i & 0xFF);
 }
 
-// string manipulation functions
+/*** string manipulation functions ***/
 int32_t strlen(uint8_t *s) {
     int32_t len = 0;
     while (*s++ != '\0') len++;
@@ -102,9 +104,10 @@ void strcpy(uint8_t *trg, uint8_t *src) {
 }
 
 void strcat(uint8_t *trg, uint8_t *src) {
-  while (*trg++ != '\0');
-  trg--;
-  while (*src != '\0') *trg++ = *src++;
-  *trg = '\0';
-  return;
+    // NOTE: if trg is not big enough -> undefined behavior
+    while (*trg++ != '\0');
+    trg--;
+    while (*src != '\0') *trg++ = *src++;
+    *trg = '\0';
+    return;
 }
