@@ -476,8 +476,20 @@ llvm::Value * ASTOp::codegen() {
     case PLUS:   return Builder.CreateAdd(l, r, "addtmp");
     case MINUS:  return Builder.CreateSub(l, r, "subtmp");
     case TIMES:  return Builder.CreateMul(l, r, "multmp");
-    case DIV:    return Builder.CreateSDiv(l, r, "divtmp");
-    case MOD:    return Builder.CreateSRem(l, r, "modtmp");
+    case DIV:
+    {
+      if (this->left->type == typeInteger)
+        return Builder.CreateSDiv(l, r, "divtmp");
+      else
+        return Builder.CreateUDiv(l, r, "divtmp");
+    }
+    case MOD:
+    {
+      if (this->left->type == typeInteger)
+        return Builder.CreateSRem(l, r, "modtmp");
+      else
+        return Builder.CreateURem(l, r, "modtmp");
+    }
     case EQ:     return Builder.CreateICmpEQ(l, r, "eqtmp");
     case NE:     return Builder.CreateICmpNE(l, r, "neqtmp");
     case LT:     return Builder.CreateICmpSLT(l, r, "lttmp");
