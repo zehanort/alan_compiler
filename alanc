@@ -62,10 +62,6 @@ if not dump_IR_or_final and args.infile is None:
 if args.dump_IR and args.dump_final:
     parser.error('the -i and -f flags are mutually exlusive')
 
-# do not allow printing code on screen and storing it in files at the same time (overkill)
-if dump_IR_or_final and args.store_IR_and_final:
-    parser.error('using the -i or the -f flag along with the -a flag is not allowed')
-
 # a friendly reminder
 if dump_IR_or_final and args.outname != 'a.out':
     parser.error('usage of the -o flag along with the -i or the -f flag is meaningless')
