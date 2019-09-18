@@ -5,7 +5,7 @@ fun1 () : proc
 		return;
 	}
 {
-	writeString("In fun1!\n");
+	writeString("in fun1!\n");
 	fun2();
 	return;
 }

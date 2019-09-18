@@ -1,4 +1,4 @@
 hello () : proc
 {
-    writeString("Hello world!\n");
+	writeString("Hello world!\n");
 }

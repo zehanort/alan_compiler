@@ -11,9 +11,9 @@ f1 () : proc
 	x = 0;
 	writeString("(f1) x = ");
 	writeInteger(x);
-	writeString("\n");
+	writeChar('\n');
 	f2();
 	writeString("(f1) x = ");
 	writeInteger(x);
-	writeString("\n");
+	writeChar('\n');
 }
