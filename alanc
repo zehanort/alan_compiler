@@ -3,7 +3,7 @@
 import argparse
 import subprocess as sp
 from os import remove
-from os.path import split, join
+from os.path import dirname, split, join
 from sys import stdin, stdout, stderr
 
 # define the arguments of the compiler
@@ -77,8 +77,9 @@ else:
 objname = progname + '.o'
 
 # define some command line utilities needed to compile Alan programs
-alan_libraries = 'lib/libalanstd.a'
-ir_compiler = 'bin/alan'
+alancdir = dirname(__file__)
+alan_libraries = join(alancdir, 'lib/libalanstd.a')
+ir_compiler = join(alancdir, 'bin/alan')
 final_compiler = 'llc'
 final_compiler_flags = ['-filetype=obj', f'-o={objname}']
 optimizer = 'opt'
