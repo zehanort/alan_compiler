@@ -115,12 +115,12 @@ void ASTVdef::sem() {
 void ASTFdef::sem() {
 	linecount = line;
   notIf = 1;																	// notIf = 1 <-> not inside if instruction
-	if (left->type->kind == TYPE_VOID)					// for proc functions:
-		funcRet = 1;															// --> no ret instr needed
-	else 																				// for non-proc functions:
-		funcRet = 0;															// --> set funcRet = 0 (no ret instr found in function main body)
-  left->sem();																// semantic analysis of Fdecl
-	if (right) right->sem();										// semantic analysis of function body (compound statement) if any
+	left->sem();																// semantic analysis of Fdecl
+	if (left->type->kind == TYPE_VOID)          // for proc functions:
+    funcRet = 1;                              // --> no ret instr needed
+  else                                        // for non-proc functions:
+    funcRet = 0;                              // --> set funcRet = 0 (no ret instr found in function main body)
+  if (right) right->sem();										// semantic analysis of function body (compound statement) if any
   closeScope();																// close function scope (after body)
   funcList.pop();															// pop from funcList
   // update currFunction:
@@ -128,7 +128,7 @@ void ASTFdef::sem() {
   	currFunction = NULL;
   else  																			// for other functions
   	currFunction = funcList.top();
-  if (!funcRet)                             // warning if no ret instr was found in function body (outside if instr)
+  if (!funcRet)                               // warning if no ret instr was found in function body (outside if instr)
     warning(("Control may reach end of non-proc function " + left->id).c_str());
   return;
 }
