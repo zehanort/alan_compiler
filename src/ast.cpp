@@ -10,7 +10,7 @@ using namespace std;
 stack<SymbolEntry *> funcList;
 SymbolEntry *currFunction;
 // flags used to define if there is a return instruction in non-proc function
-int notIf, funcRet;
+int notInCond, funcRet;
 
 // function that calls error() if types l and r are not the same or not supported by operator op
 void checkTypes(Type l, Type r, const char *op) {
@@ -114,21 +114,19 @@ void ASTVdef::sem() {
 // semantic analysis of ASTFdef Node
 void ASTFdef::sem() {
 	linecount = line;
-  notIf = 1;																	// notIf = 1 <-> not inside if instruction
+  notInCond = 1;															// notInCond = 1 <-> not inside conditional statement
 	left->sem();																// semantic analysis of Fdecl
 	if (left->type->kind == TYPE_VOID)          // for proc functions:
     funcRet = 1;                              // --> no ret instr needed
   else                                        // for non-proc functions:
-    funcRet = 0;                              // --> set funcRet = 0 (no ret instr found in function main body)
+    funcRet = 0;                              // --> initialize funcRet = 0 (no ret instr found in function main body)
   if (right) right->sem();										// semantic analysis of function body (compound statement) if any
   closeScope();																// close function scope (after body)
   funcList.pop();															// pop from funcList
   // update currFunction:
-  if (funcList.empty())												// for main() function
-  	currFunction = NULL;
-  else  																			// for other functions
-  	currFunction = funcList.top();
-  if (!funcRet)                               // warning if no ret instr was found in function body (outside if instr)
+  if (funcList.empty()) currFunction = NULL;  // for main() function
+  else currFunction = funcList.top();         // for other functions
+  if (!funcRet)                               // warning if no ret instr was found (outside conditional stmt)
     warning(("Control may reach end of non-proc function " + left->id).c_str());
   return;
 }
@@ -231,8 +229,8 @@ void ASTFcall::sem() {
         error("function parameter type mismatch");
     }
 
-    currPar = currPar->right;																// next given parameter
-    expectedPar = expectedPar->u.eParameter.next;						// next expected parameter
+    currPar = currPar->right;											// next given parameter
+    expectedPar = expectedPar->u.eParameter.next;	// next expected parameter
   }
 
   if (expectedPar)
@@ -255,13 +253,13 @@ void ASTFcall_stmt::sem() {
 // semantic analysis of ASTIf Node
 void ASTIf::sem() {
 	linecount = line;
-  left->sem();																// semantic analysis of condition
+  left->sem();														    // semantic analysis of condition
   if (!equalType(left->type, typeBoolean))
     error("if expects a boolean condition");
-	int notIf_ = notIf;													// save previous state of notIf (in case of nested ifs)
-	notIf = 0;																	// notIf = 0 <-> inside if instruction body
+	int notInCond_ = notInCond;									// save previous state of notInCond (in case of nested cond stmts)
+	notInCond = 0;															// notInCond = 0 <-> inside conditional statement
   if (right) right->sem();										// semantic analysis of (if) compound statement, if any
-	notIf = notIf_;															// restore previous state of notIf
+	notInCond = notInCond_;											// restore previous state of notInCond
   return;
 }
 
@@ -269,10 +267,10 @@ void ASTIf::sem() {
 void ASTIfelse::sem() {
 	linecount = line;
   left->sem();
-	int notIf_ = notIf;													// save previous state of notIf (in case of nested ifs)
-	notIf = 0;																	// notIf = 0 <-> inside else instruction body
+	int notInCond_ = notInCond;									// save previous state of notInCond (in case of nested cond stmts)
+	notInCond = 0;															// notInCond = 0 <-> inside conditional statement
   if (right) right->sem();										// semantic analysis of (else) compound statement, if any
-  notIf = notIf_;															// restore previous state of notIf
+  notInCond = notInCond_;											// restore previous state of notInCond
   return;
 }
 
@@ -280,9 +278,12 @@ void ASTIfelse::sem() {
 void ASTWhile::sem() {
 	linecount = line;
   left->sem();																// semantic analysis of condition
+  int notInCond_ = notInCond;                 // save previous state of notInCond (in case of nested cond stmt)
+  notInCond = 0;                              // notInCond = 0 <-> inside conditional statement
   if (!equalType(left->type, typeBoolean))
     error("while loop expects a boolean condition");
   if (right) right->sem();										// semantic analysis of compound statement (if any)
+  notInCond = notInCond_;                     // restore previous state of notInCond
   return;
 }
 
@@ -298,7 +299,7 @@ void ASTRet::sem() {
   }
   else if (currFunction->u.eFunction.resultType->kind != TYPE_VOID)
     error("return with no value, in non-proc function");
-  if (notIf) funcRet = 1;											// if we are NOT inside the body of an if instr, ret instr exists
+  if (notInCond) funcRet = 1;									// if we are NOT inside a conditional statement, ret instr exists
   return;
 }
 
