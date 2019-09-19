@@ -126,11 +126,10 @@ void ASTFdef::sem() {
   // update currFunction:
   if (funcList.empty())												// for main() function
   	currFunction = NULL;
-  else {																			// for other functions
+  else  																			// for other functions
   	currFunction = funcList.top();
-  	if (!funcRet)															// warning if no ret instr was found in function body (outside if instr)
-  		warning(("Control may reach end of non-proc function " + left->id + "().").c_str());
-  }
+  if (!funcRet)                             // warning if no ret instr was found in function body (outside if instr)
+    warning(("Control may reach end of non-proc function " + left->id).c_str());
   return;
 }
 
@@ -295,7 +294,7 @@ void ASTRet::sem() {
   else if (left) {    												// if we have the form "return e", check e and function result type
     left->sem();															// semantic analysis of returned expression
     if (!equalType(currFunction->u.eFunction.resultType, left->type))
-      error("result type of function and return value mismatch");
+      error("return type of function and return value mismatch");
   }
   else if (currFunction->u.eFunction.resultType->kind != TYPE_VOID)
     error("return with no value, in non-proc function");

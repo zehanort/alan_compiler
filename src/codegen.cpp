@@ -51,36 +51,36 @@ llvm::Value *calcAddr (ASTNode *var, string function) {
 		t = logger.getVarType(var->id);
 	}
   
-  if (var->type->refType != nullptr) {
-    // id is an array
-    if (t->isArrayTy())
-      addr = Builder.CreateGEP(addr, vector<llvm::Value *>{c32(0), c32(0)});
-    
-    // id is an iarray
-    else
-      addr = Builder.CreateGEP(addr, c32(0));
+	if (var->type->refType != nullptr) {
+		// id is an array
+		if (t->isArrayTy())
+			addr = Builder.CreateGEP(addr, vector<llvm::Value *>{c32(0), c32(0)});
+
+		// id is an iarray
+		else
+			addr = Builder.CreateGEP(addr, c32(0));
   }
   
   // id is a variable
-  else {
-    
-    // variable is element of array (a[2])
-    if (t->isArrayTy()) {
-      auto *index = var->left->codegen();
-      addr = Builder.CreateGEP(addr, vector<llvm::Value *>{c32(0), index});
-    }
-    
-    else {
-	    // variable is element of iarray (a[2])
-    	if (var->left != nullptr) {
-  	    auto *index = var->left->codegen();
-    	  addr = Builder.CreateGEP(addr, index);
-    	}
-    
-	    // variable is as simple as it gets
-	  }
-  }
-  return addr;
+	else {
+
+		// variable is element of array (a[2])
+		if (t->isArrayTy()) {
+		auto *index = var->left->codegen();
+		addr = Builder.CreateGEP(addr, vector<llvm::Value *>{c32(0), index});
+		}
+
+		else {
+			// variable is element of iarray (a[2])
+			if (var->left != nullptr) {
+				auto *index = var->left->codegen();
+				addr = Builder.CreateGEP(addr, index);
+			}
+
+		// variable is as simple as it gets
+		}
+	}
+	return addr;
 }
 
 /* ---------------------------------------------------------------------
@@ -132,7 +132,7 @@ void codegen(ASTNode *t) {
 // codegen() method of ASTId nodes
 llvm::Value * ASTId::codegen() {
   // load from the stack slot
-	return Builder.CreateLoad(calcAddr(this, "ID"));
+  return Builder.CreateLoad(calcAddr(this, "ID"));
 }
 
 // codegen() method of ASTInt nodes
@@ -161,7 +161,7 @@ llvm::Value * ASTVdef::codegen() {
 
 // codegen() method of ASTFdef nodes
 llvm::Value * ASTFdef::codegen() {
- 	auto *params = this->left->left;
+  auto *params = this->left->left;
   auto *locdefs = this->left->right;
   string Fname = this->left->id;
   llvm::Type *retType = type_to_llvm(this->left->type);
@@ -221,7 +221,7 @@ llvm::Value * ASTFdef::codegen() {
   while (locdefs != nullptr) {
     locdefs->left->codegen();
     locdefs = locdefs->right;
-	  Builder.SetInsertPoint(BB);
+    Builder.SetInsertPoint(BB);
   }
 
   // step 5: codegen body
@@ -229,7 +229,7 @@ llvm::Value * ASTFdef::codegen() {
   	this->right->codegen();
 
   // step 6: check for return
-	retType = F->getReturnType();
+  retType = F->getReturnType();
   if (retType->isIntegerTy(32)) Builder.CreateRet(c32(0));
   else if (retType->isIntegerTy(8)) Builder.CreateRet(c8(0));
   else Builder.CreateRetVoid();
@@ -251,7 +251,7 @@ llvm::Value * ASTAssign::codegen() {
 	auto *expr = this->right->codegen();
 	auto *addr = calcAddr(this->left, "AS");
 	// store expression to the stack slot
-  return Builder.CreateStore(expr, addr);
+	return Builder.CreateStore(expr, addr);
 }
 
 // codegen() method of ASTFcall nodes
@@ -260,40 +260,37 @@ llvm::Value * ASTFcall::codegen() {
 	vector<llvm::Value*> argv;
 	auto *ASTargs = this->left;
 
-  // loop through parameters
+	// loop through parameters
 	for (auto &Arg : F->args()) {
 
-    llvm::Value *arg;
-    // function with no parameters, only outer scope ones
-    if (ASTargs == nullptr) {
-      argv.push_back(deref(logger.getVarAlloca(Arg.getName().str())));
-      continue;
-    }
-    
-    auto *ASTarg = ASTargs->left;
+	    llvm::Value *arg;
+	    // function with no parameters, only outer scope ones
+	    if (ASTargs == nullptr) {
+	      argv.push_back(deref(logger.getVarAlloca(Arg.getName().str())));
+	      continue;
+	    }
+	    
+	    auto *ASTarg = ASTargs->left;
 
-    // check if done with real parameters (outer scope vars left)
-    if (ASTarg == nullptr) {
-      argv.push_back(deref(logger.getVarAlloca(Arg.getName().str())));
-      continue;
-    }
+	    // check if done with real parameters (outer scope vars left)
+	    if (ASTarg == nullptr) {
+	      argv.push_back(deref(logger.getVarAlloca(Arg.getName().str())));
+	      continue;
+	    }
 
-    // If expected argument is by value
- 		if (!Arg.getType()->isPointerTy()) {
-	    arg = ASTarg->codegen();
- 		}
- 		else {
- 			// string literal
-      if (ASTarg->op == STRING) {
-        arg = ASTarg->codegen();
-      }
-      // variable
-      else {
-      	arg = calcAddr(ASTarg, "ID");
-      }
- 		}
-    argv.push_back(arg);
-    if (ASTargs->left != nullptr) ASTargs = ASTargs->right;
+	    // If expected argument is by value
+	 		if (!Arg.getType()->isPointerTy())
+			    arg = ASTarg->codegen();
+	 		else {
+				// string literal
+				if (ASTarg->op == STRING)
+					arg = ASTarg->codegen();
+				// variable
+				else
+					arg = calcAddr(ASTarg, "ID");
+	 		}
+	    argv.push_back(arg);
+	    if (ASTargs->left != nullptr) ASTargs = ASTargs->right;
 	}
 
 	return Builder.CreateCall(F, argv);
@@ -499,7 +496,7 @@ llvm::Value * ASTOp::codegen() {
     case NOT:    return Builder.CreateNot(r, "nottmp");
     case TRUE_:  return Builder.CreateICmpEQ(c32(0), c32(0), "true");
     case FALSE_: return Builder.CreateICmpEQ(c32(0), c32(1), "false");
-    default:		 internal("unknown operation to codegen");
+    default:     internal("unknown operation to codegen");
   }
   return nullptr;
 }
@@ -533,7 +530,7 @@ void createstdlib() {
     libFunctions.push_back(llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "readChar", TheModule.get()));
 
     FT = llvm::FunctionType::get(proc, vector<llvm::Type *>{i32, i8->getPointerTo()}, false);
- 		libFunctions.push_back(llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "readString", TheModule.get()));
+    libFunctions.push_back(llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "readString", TheModule.get()));
 
     // type casting functions
     FT = llvm::FunctionType::get(i32, vector<llvm::Type *>{i8}, false);
