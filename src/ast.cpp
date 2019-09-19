@@ -9,6 +9,8 @@ using namespace std;
 // some globals to keep track of functions
 stack<SymbolEntry *> funcList;
 SymbolEntry *currFunction;
+// flags used to define if there is a return instruction in non-proc function
+int notIf, funcRet;
 
 // function that calls error() if types l and r are not the same or not supported by operator op
 void checkTypes(Type l, Type r, const char *op) {
@@ -112,12 +114,23 @@ void ASTVdef::sem() {
 // semantic analysis of ASTFdef Node
 void ASTFdef::sem() {
 	linecount = line;
+  notIf = 1;																	// notIf = 1 <-> not inside if instruction
+	if (left->type->kind == TYPE_VOID)					// for proc functions:
+		funcRet = 1;															// --> no ret instr needed
+	else 																				// for non-proc functions:
+		funcRet = 0;															// --> set funcRet = 0 (no ret instr found in function main body)
   left->sem();																// semantic analysis of Fdecl
-  if (right) right->sem();										// semantic analysis of function body (compound statement) if any
+	if (right) right->sem();										// semantic analysis of function body (compound statement) if any
   closeScope();																// close function scope (after body)
   funcList.pop();															// pop from funcList
-  if (funcList.empty()) currFunction = NULL;	// update currFunction
-  else currFunction = funcList.top();
+  // update currFunction:
+  if (funcList.empty())												// for main() function
+  	currFunction = NULL;
+  else {																			// for other functions
+  	currFunction = funcList.top();
+  	if (!funcRet)															// warning if no ret instr was found in function body (outside if instr)
+  		warning(("Control may reach end of non-proc function " + left->id + "().").c_str());
+  }
   return;
 }
 
@@ -246,7 +259,10 @@ void ASTIf::sem() {
   left->sem();																// semantic analysis of condition
   if (!equalType(left->type, typeBoolean))
     error("if expects a boolean condition");
+	int notIf_ = notIf;													// save previous state of notIf (in case of nested ifs)
+	notIf = 0;																	// notIf = 0 <-> inside if instruction body
   if (right) right->sem();										// semantic analysis of (if) compound statement, if any
+	notIf = notIf_;															// restore previous state of notIf
   return;
 }
 
@@ -254,7 +270,10 @@ void ASTIf::sem() {
 void ASTIfelse::sem() {
 	linecount = line;
   left->sem();
+	int notIf_ = notIf;													// save previous state of notIf (in case of nested ifs)
+	notIf = 0;																	// notIf = 0 <-> inside else instruction body
   if (right) right->sem();										// semantic analysis of (else) compound statement, if any
+  notIf = notIf_;															// restore previous state of notIf
   return;
 }
 
@@ -279,7 +298,8 @@ void ASTRet::sem() {
       error("result type of function and return value mismatch");
   }
   else if (currFunction->u.eFunction.resultType->kind != TYPE_VOID)
-    error("function defined as proc can not return anything");
+    error("return with no value, in non-proc function");
+  if (notIf) funcRet = 1;											// if we are NOT inside the body of an if instr, ret instr exists
   return;
 }
 

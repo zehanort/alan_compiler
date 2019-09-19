@@ -7,7 +7,7 @@ not_working=()
 
 for infile in $(find test/ | grep ".alan"); do
 	echo "compiling $infile"
-	./alanc $infile
+	./alanc -x $infile
 	if [[ $? -ne $zero ]]; then
 		not_working+=($infile)
 	fi

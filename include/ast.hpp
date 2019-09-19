@@ -27,7 +27,7 @@ public:
   int line = linecount;  // line number
   kind op;               // kind of operation (ASTOp only)
   string id;             // name (vars, functions, chars)
-  Type type;             // ASTExpr only
+  Type type;             // var, function, expression type
   int num;               // numeric value of ints/bytes
   ASTNode *left, *right; // left and right (generic) AST nodes
   PassMode pm;           // ASTPar only

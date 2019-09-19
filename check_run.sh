@@ -5,7 +5,7 @@ for dir in $(find -iname should_run); do
 
 		echo " === checking file $infile ==="
 
-		./alanc $infile
+		./alanc -x $infile
 
 		INPUTFILE=$dir/$(basename $infile .alan).stdin
 		OUTPUTFILE=$dir/$(basename $infile .alan).stdout

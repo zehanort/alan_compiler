@@ -13,6 +13,7 @@ main () : int
 	test (x : int, x : byte) : int	--sem error : duplicates
 	{
 		writeString("hi!");
+		return 0;
 	}
 {
 	a = 17;
