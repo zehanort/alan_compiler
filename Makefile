@@ -1,4 +1,4 @@
-.PHONY: clean distclean default
+.PHONY: default clean distclean install uninstall
 
 SRCDIR=src
 INCDIR=include
@@ -6,12 +6,14 @@ LIBDIR=lib
 BUILDDIR=build
 BINDIR=bin
 INC=-I./$(INCDIR)
+INSTALLDIR=/usr/local/bin
 
 CXX=g++
 CC=gcc
 CXXFLAGS=`llvm-config --cxxflags` $(INC)
 CFLAGS=-w $(INC)
 LDFLAGS=`llvm-config --ldflags --system-libs --libs all` /usr/lib/x86_64-linux-gnu/libfl.a
+COMPILER=alanc
 
 default: $(BINDIR)/alan $(LIBDIR)/libalanstd.a
 
@@ -52,3 +54,16 @@ clean:
 
 distclean: clean
 	$(RM) -rf $(BINDIR)
+
+install: $(BINDIR)/alan $(LIBDIR)/libalanstd.a
+	mkdir -p $(INSTALLDIR)/bin
+	mkdir -p $(INSTALLDIR)/lib
+	cp $(BINDIR)/alan $(INSTALLDIR)/bin
+	cp $(LIBDIR)/libalanstd.a $(INSTALLDIR)/lib
+	cp $(COMPILER) $(INSTALLDIR)
+
+uninstall:
+	rm -f $(INSTALLDIR)/bin/alan
+	rm -f $(INSTALLDIR)/lib/libalanstd.a
+	rm -f $(INSTALLDIR)/$(COMPILER)
+	rmdir --ignore-fail-on-non-empty $(INSTALLDIR)/bin $(INSTALLDIR)/lib
