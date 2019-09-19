@@ -83,8 +83,9 @@ ir_compiler = join(alancdir, 'bin/alan')
 final_compiler = 'llc'
 final_compiler_flags = ['-filetype=obj', f'-o={objname}']
 optimizer = 'opt'
-optimizer_flags = ['-O3', '-S', '-disable-inlining']
-#optimizer_flags = ['-O3', '-S']
+# inlining opt pass replicates code a lot, but that's ok for Alan :/
+# optimizer_flags = ['-O3', '-S', '-disable-inlining']
+optimizer_flags = ['-O3', '-S']
 linker = 'clang'
 linker_flags = [objname, alan_libraries, '-o', args.outname]
 
